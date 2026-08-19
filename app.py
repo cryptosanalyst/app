@@ -1,20 +1,20 @@
 import streamlit as st
 import google.generativeai as genai
 import requests
+from datetime import date
 
 # ---------------------------------------------------------
 # 1. Configuration de la page Streamlit
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cryptos Analyst IA",
-    page_icon="⚡",
+    page_icon="🤖",
     layout="wide"
 )
 
-# Correction CSS pour les prix et les notes pédagogiques
+# Style CSS
 st.markdown("""
     <style>
-    /* Forcer le fond sombre général */
     stApp, .main, [data-testid="stAppViewContainer"] {
         background-color: #0d0e12 !important;
         color: #ffffff !important;
@@ -27,7 +27,20 @@ st.markdown("""
         margin: 0 auto !important;
     }
 
-    /* Titres */
+    .avatar-container {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .avatar-img {
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #ffd700;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    }
+
     h1 { 
         color: #ffd700 !important; 
         text-align: center; 
@@ -43,7 +56,7 @@ st.markdown("""
         margin-bottom: 2rem;
     }
 
-    /* FIX 1 : Affichage des prix en badge jaune texte noir */
+    /* Badges de Prix */
     code {
         background-color: #ffd700 !important;
         color: #0d0e12 !important;
@@ -53,7 +66,7 @@ st.markdown("""
         font-size: 0.95em !important;
     }
 
-    /* FIX 2 : Notes pédagogiques (Citations / Blockquotes) en Jaune */
+    /* Notes pédagogiques en Jaune */
     blockquote {
         border-left: 3px solid #ffd700 !important;
         background-color: #161b22 !important;
@@ -68,7 +81,6 @@ st.markdown("""
         font-weight: 500 !important;
     }
 
-    /* Champ de saisie & Bouton */
     .stTextInput > label {
         display: block;
         text-align: center;
@@ -98,13 +110,31 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# En-tête
-st.markdown("<h1>⚡ Cryptos Analyst IA</h1>", unsafe_allow_html=True)
+# En-tête avec Avatar
+st.markdown("""
+    <div class='avatar-container'>
+        <img src='https://raw.githubusercontent.com/VOTRE_NOM_GITHUB/VOTRE_DEPOT/main/avatar.jpg' class='avatar-img' alt='Avatar'>
+    </div>
+""", unsafe_allow_html=True)
+
+st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. Récupération des Données CoinGecko
+# OPTION A : Gestion de la limite de 2 requêtes / jour par session
 # ---------------------------------------------------------
+TODAY = str(date.today())
+
+if "last_access_date" not in st.session_state or st.session_state.last_access_date != TODAY:
+    st.session_state.last_access_date = TODAY
+    st.session_state.daily_request_count = 0
+
+requests_left = 2 - st.session_state.daily_request_count
+
+# ---------------------------------------------------------
+# OPTION B : Cache CoinGecko (Valide 10 min / 600 sec)
+# ---------------------------------------------------------
+@st.cache_data(ttl=600)
 def get_coingecko_data(query):
     try:
         search_url = f"https://api.coingecko.com/api/v3/search?query={query}"
@@ -143,7 +173,57 @@ def get_coingecko_data(query):
         return None, f"Erreur CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# 3. Instruction Système Gemini
+# OPTION C : Système de Rotation sur 5 Clés API Gemini
+# ---------------------------------------------------------
+def get_gemini_api_keys():
+    """Récupère toutes les clés API disponibles déclarées dans les secrets."""
+    keys = []
+    # Clé standard unique (rétrocompatibilité)
+    if "GEMINI_API_KEY" in st.secrets:
+        keys.append(st.secrets["GEMINI_API_KEY"])
+    
+    # Numérotation de 1 à 5
+    for i in range(1, 6):
+        key_name = f"GEMINI_API_KEY_{i}"
+        if key_name in st.secrets:
+            keys.append(st.secrets[key_name])
+            
+    return list(dict.fromkeys(keys)) # Supprime d'éventuels doublons
+
+gemini_keys = get_gemini_api_keys()
+
+if not gemini_keys:
+    st.error("⚠️ Aucune clé API Gemini n'a été configurée dans secrets.toml.")
+    st.stop()
+
+def generate_content_with_key_failover(prompt_text, system_instruction):
+    """Essaye les clés Gemini les unes après les autres si une limite est atteinte."""
+    candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
+    last_err = None
+
+    for api_key in gemini_keys:
+        try:
+            genai.configure(api_key=api_key)
+            for model_name in candidate_models:
+                try:
+                    model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=system_instruction
+                    )
+                    response = model.generate_content(prompt_text)
+                    return response.text, None
+                except Exception as model_err:
+                    last_err = model_err
+                    continue
+        except Exception as key_err:
+            # Si quota dépassé ou clé bloquée, passe à la clé suivante
+            last_err = key_err
+            continue
+
+    return None, last_err
+
+# ---------------------------------------------------------
+# Prompt Système
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Tu es un analyste financier senior passionné par la crypto. Tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel).
@@ -177,35 +257,34 @@ Structure de ton rapport :
 """
 
 # ---------------------------------------------------------
-# 4. Connexion API Gemini
-# ---------------------------------------------------------
-try:
-    gemini_api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=gemini_api_key)
-except Exception:
-    st.error("⚠️ Clé API Gemini manquante dans secrets.toml.")
-    st.stop()
-
-# ---------------------------------------------------------
-# 5. Interface Utilisateur
+# Interface Utilisateur & Contrôle des Limites
 # ---------------------------------------------------------
 crypto_input = st.text_input(
     "Quelle crypto veux-tu décortiquer aujourd'hui ?", 
     placeholder="Tape un ticker ou un nom (ex: BGB, Solana, ONDO, SUI, Bitcoin...)"
 )
 
+# Indication des crédits restants
+if requests_left > 0:
+    st.caption(f"⚡ Crédits gratuits restants pour aujourd'hui : **{requests_left} / 2**")
+else:
+    st.warning("⚠️ Tu as atteint ta limite de 2 analyses quotidiennes. Reviens demain pour de nouvelles analyses !")
+
 st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-submit_button = st.button("🚀 LANCER L'ANALYSE D'EXPERT")
+submit_button = st.button("🚀 LANCER L'ANALYSE D'EXPERT", disabled=(requests_left <= 0))
 
 # ---------------------------------------------------------
-# 6. Traitement & Génération
+# Traitement & Génération
 # ---------------------------------------------------------
 if submit_button and crypto_input:
-    with st.spinner(f"Récupération des données en direct pour **{crypto_input}**..."):
-        cg_data, error = get_coingecko_data(crypto_input)
-        
-        if cg_data:
-            data_context = f"""
+    if requests_left <= 0:
+        st.error("Limite quotidienne atteinte.")
+    else:
+        with st.spinner(f"Récupération des données en direct pour **{crypto_input}**..."):
+            cg_data, error = get_coingecko_data(crypto_input)
+            
+            if cg_data:
+                data_context = f"""
 Données de marché officielles CoinGecko pour {cg_data['name']} ({cg_data['symbol']}) :
 - Prix actuel USD: `${cg_data['current_price_usd']}`
 - Rang Market Cap: #{cg_data['rank']}
@@ -218,34 +297,23 @@ Données de marché officielles CoinGecko pour {cg_data['name']} ({cg_data['symb
 - Circulating Supply: {cg_data['circulating_supply']}
 - Total Supply: {cg_data['total_supply']}
 """
-        else:
-            data_context = f"Indication : CoinGecko indisponible ({error}). Effectue l'analyse sur : {crypto_input}"
+            else:
+                data_context = f"Indication : CoinGecko indisponible ({error}). Effectue l'analyse sur : {crypto_input}"
 
-        prompt_final = f"{data_context}\n\nEffectue l'analyse complète de la crypto : {crypto_input}"
+            prompt_final = f"{data_context}\n\nEffectue l'analyse complète de la crypto : {crypto_input}"
 
-        candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
-        response_text = None
-        last_error = None
+            # Appel avec basculement automatique sur les 5 clés
+            response_text, gen_error = generate_content_with_key_failover(prompt_final, SYSTEM_INSTRUCTION)
 
-        for model_name in candidate_models:
-            try:
-                model = genai.GenerativeModel(
-                    model_name=model_name,
-                    system_instruction=SYSTEM_INSTRUCTION
-                )
-                response = model.generate_content(prompt_final)
-                response_text = response.text
-                break
-            except Exception as e:
-                last_error = e
-                continue
-
-        if response_text:
-            st.markdown("<hr style='border-color: #30363d; margin: 2rem 0;'>", unsafe_allow_html=True)
-            st.markdown(response_text)
-            
-            st.markdown("---")
-            st.markdown("### 📋 Copier le rapport")
-            st.code(response_text, language="markdown")
-        else:
-            st.error(f"Erreur lors de la génération : {last_error}")
+            if response_text:
+                # Décrémenter le crédit journalier de l'utilisateur
+                st.session_state.daily_request_count += 1
+                
+                st.markdown("<hr style='border-color: #30363d; margin: 2rem 0;'>", unsafe_allow_html=True)
+                st.markdown(response_text)
+                
+                st.markdown("---")
+                st.markdown("### 📋 Copier le rapport")
+                st.code(response_text, language="markdown")
+            else:
+                st.error(f"Désolé, l'agent IA est très sollicité en ce moment. Réessaie dans quelques minutes. Erreur : {gen_error}")
