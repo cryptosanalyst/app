@@ -7,7 +7,7 @@ import base64
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. Configuration et Style CSS
+# 1. Configuration et Style CSS (Base Référence)
 # ---------------------------------------------------------
 st.set_page_config(page_title="Cryptos Analyst IA", page_icon="🤖", layout="wide")
 
@@ -19,10 +19,11 @@ st.markdown("""
     .avatar-wrapper img { width: 120px !important; height: 120px !important; border-radius: 50% !important; border: 3px solid #ffd700 !important; }
     h1 { color: #ffd700 !important; text-align: center; font-weight: 800 !important; }
     .welcome-msg { text-align: center; color: #ffffff !important; font-size: 1.15rem; font-weight: 600; margin-bottom: 2rem; }
-    /* Style pour les prix sans arrière-plan jaune envahissant */
     .stMarkdown code { background-color: transparent !important; color: #ffd700 !important; font-weight: bold !important; font-size: 1.1em !important; }
-    /* Citations pédagogiques */
     blockquote { border-left: 3px solid #ffd700 !important; background-color: #161b22 !important; color: #ffd700 !important; padding: 10px 15px !important; }
+    /* Bouton Jaune texte Noir */
+    .stButton>button { background-color: #ffd700 !important; color: #000000 !important; font-weight: bold !important; width: 100% !important; border-radius: 8px !important; border: none !important; }
+    .stButton>button:hover { background-color: #e6c200 !important; color: #000000 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -60,27 +61,34 @@ def get_coingecko_data(query):
             "current_price_usd": market.get("current_price", {}).get("usd"), "market_cap_usd": market.get("market_cap", {}).get("usd"),
             "platforms": data.get("platforms", {})
         }, None
-    except: return None, "Erreur API"
+    except Exception as e: return None, f"Erreur CoinGecko: {str(e)}"
 
+# Fonction corrigée pour afficher l'erreur réelle
 def generate_content_with_key_failover(prompt_text, system_instruction):
     gemini_keys = [st.secrets[k] for k in st.secrets if "GEMINI_API_KEY" in k]
+    if not gemini_keys: return None, "Aucune clé API trouvée dans secrets.toml"
+    
+    last_error = ""
     for api_key in gemini_keys:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name="gemini-2.0-flash", system_instruction=system_instruction, tools=['google_search_retrieval'])
+            # Utilisation d'un modèle standard et stable
+            model = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction=system_instruction)
             response = model.generate_content(prompt_text)
             if response and response.text: return response.text, None
-        except: continue
-    return None, "Erreur de génération"
+        except Exception as e:
+            last_error = str(e)
+            continue
+    return None, last_error
 
 # ---------------------------------------------------------
-# Prompt Système Strict (Anti-Brouillon)
+# Prompt Système
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Tu es un analyste financier crypto. Ton ton est familier, chaleureux et enthousiaste.
 
 RÈGLE ABSOLUE : Tu ne dois générer QUE le rapport final en Markdown.
-NE GÉNÈRE AUCUN plan de pensée, aucune étape de recherche interne, aucun brouillon, aucun texte d'introduction type "Voici mon analyse". 
+NE GÉNÈRE AUCUN plan de pensée, aucune étape de recherche, aucun brouillon. 
 COMMENCE DIRECTEMENT par le titre de la section 1.
 
 Structure stricte :
@@ -103,10 +111,11 @@ else: st.warning("⚠️ Limite atteinte.")
 
 if st.button("🚀 LANCER L'ANALYSE", disabled=(requests_left <= 0)):
     cg_data, err = get_coingecko_data(crypto_input)
-    if not cg_data: st.warning("😔 Crypto introuvable.")
+    if err: st.error(err)
+    elif not cg_data: st.warning("😔 Crypto introuvable.")
     else:
         platforms = "\n".join([f"- {n.upper()}: `{a}`" for n, a in cg_data['platforms'].items() if a])
-        prompt = f"Données: {cg_data}. Analyse : {cg_data['name']}. Adresses: {platforms}"
+        prompt = f"Données: {cg_data}. Analyse: {cg_data['name']}. Adresses: {platforms}. Rédige le rapport final."
         
         with st.spinner("Rédaction du rapport..."):
             res, gen_err = generate_content_with_key_failover(prompt, SYSTEM_INSTRUCTION)
@@ -114,4 +123,4 @@ if st.button("🚀 LANCER L'ANALYSE", disabled=(requests_left <= 0)):
                 st.session_state.daily_request_count += 1
                 st.markdown(res)
                 st.code(res, language="markdown")
-            else: st.error("Erreur de génération.")
+            else: st.error(f"Erreur de génération : {gen_err}") # Ici, tu verras l'erreur réelle
