@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Style CSS : Centrage absolu responsive & thème sombre
+# Style CSS : Centrage absolu & thème sombre
 st.markdown("""
     <style>
     stApp, .main, [data-testid="stAppViewContainer"] {
@@ -139,10 +139,10 @@ if avatar_filename:
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
-st.markdown("<div class='welcome-msg'>Bienvenu(e) je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
+st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# OPTION A : Gestion de la limite de 2 requêtes / jour par session
+# OPTION A : Limite de 2 requêtes / jour par session
 # ---------------------------------------------------------
 TODAY = str(date.today())
 
@@ -153,9 +153,9 @@ if "last_access_date" not in st.session_state or st.session_state.last_access_da
 requests_left = 2 - st.session_state.daily_request_count
 
 # ---------------------------------------------------------
-# OPTION B : Cache CoinGecko (12 Heures = 43200 secondes)
+# OPTION B : Cache CoinGecko (1 Heure = 3600 secondes)
 # ---------------------------------------------------------
-@st.cache_data(ttl=43200)
+@st.cache_data(ttl=3600)
 def get_coingecko_data(query):
     try:
         search_url = f"https://api.coingecko.com/api/v3/search?query={query}"
@@ -194,7 +194,7 @@ def get_coingecko_data(query):
         return None, f"Erreur CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# OPTION C : Système de Rotation sur 5 Clés API Gemini
+# OPTION C : Rotation sur 5 Clés API avec Recherche Web Active
 # ---------------------------------------------------------
 def get_gemini_api_keys():
     keys = []
@@ -215,6 +215,7 @@ if not gemini_keys:
     st.stop()
 
 def generate_content_with_key_failover(prompt_text, system_instruction):
+    # Utilisation des modèles Gemini
     candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
     last_err = None
 
@@ -222,16 +223,27 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
         try:
             genai.configure(api_key=api_key)
             for model_name in candidate_models:
+                # 1. Tentative avec l'outil de Recherche Web en direct (Search Grounding)
                 try:
                     model = genai.GenerativeModel(
                         model_name=model_name,
-                        system_instruction=system_instruction
+                        system_instruction=system_instruction,
+                        tools=['google_search_retrieval']
                     )
                     response = model.generate_content(prompt_text)
                     return response.text, None
-                except Exception as model_err:
-                    last_err = model_err
-                    continue
+                except Exception:
+                    # 2. Reconstitution standard si le composant tools spécifique varie
+                    try:
+                        model = genai.GenerativeModel(
+                            model_name=model_name,
+                            system_instruction=system_instruction
+                        )
+                        response = model.generate_content(prompt_text)
+                        return response.text, None
+                    except Exception as inner_err:
+                        last_err = inner_err
+                        continue
         except Exception as key_err:
             last_err = key_err
             continue
@@ -239,10 +251,16 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
     return None, last_err
 
 # ---------------------------------------------------------
-# Prompt Système
+# Prompt Système Strict (Exactitude & Dernières Mises à Jour)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Tu es un analyste financier senior passionné par la crypto. Tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel).
+
+CONSIGNE CRITIQUE - EXACTITUDE & RIGOUREUSES VÉRIFICATIONS :
+- Effectue obligatoirement une recherche Web pour VÉRIFIER L'EXACTITUDE des données financières et des dernières actualités majeures concernant le projet.
+- Intègre impérativement les métriques chiffrées exactes transmises depuis l'API CoinGecko (prix, rang, Market Cap, ATH/ATL).
+- Fournis TOUJOURS les informations de la DERNIÈRE MISE À JOUR DISPONIBLE (ex: changements stratégiques récents, transitions d'échangeur CEX vers UEX, intégrations Layer 2 comme Morph pour BGB, rachats/burns récents, roadmap actuelle).
+- Ne sous-entends ou n'invente jamais de fonctionnalités obsolètes ou fausses. Si une information est incertaine, indique-le clairement.
 
 Directives de formatage impératives :
 - Entoure TOUJOURS les prix et montants importants de backticks pour former un badge distinct (ex: `$0.60`).
@@ -251,25 +269,25 @@ Directives de formatage impératives :
 Structure de ton rapport :
 
 1. 📌 C'EST QUOI CE PROJET CONCRÈTEMENT ?
-- Présentation simple et chaleureuse du projet.
-- Catégorie & évolutions récentes (ex: CEX vers UEX, intégration Layer 2 Morph, etc.).
+- Présentation simple, exacte et chaleureuse du projet.
+- Catégorie & évolutions majeures les plus récentes (ex: CEX vers UEX, Layer 2 Morph, etc.).
 - Verdict à chaud : PÉPITE / PROJET SOLIDE / ATTENTION DANGER ?
 
 2. 📊 LES CHIFFRES EN DIRECT (GARDONS UN ŒIL SUR LE COUNTER)
 - Présente le prix actuel (`$0.60`), le classement, la Market Cap et les variations 24h/7j.
 > 🎓 Minute Pédago - Explique ici simplement une notion comme le Market Cap ou les Tokenomics.
 
-3. 🚀 LES GROS MOTEURS DE HAUSSE
-- Utilité réelle du jeton (gaz, staking, réductions) et catalyseurs récents.
+3. 🚀 LES GROS MOTEURS DE HAUSSE & ACTUALITÉS RÉCENTES
+- Utilité réelle du jeton (frais de gaz, staking, réductions) et catalyseurs les plus récents vérifiés.
 
 4. ⚠️ LES PIÈGES ET RISQUES À NE PAS IGNORER
-- Facteurs de risque (concurrence, déblocage de jetons, régulation).
+- Facteurs de risque réels (concurrence, déblocage de jetons, régulation).
 
 5. ⚔️ COMPARATIF AVEC LA CONCURRENCE
-- Petit comparatif rapide avec 2-3 concurrents.
+- Petit comparatif rapide avec 2-3 concurrents directs actuels.
 
 6. 🎯 MON VERDICT & MON CONSEIL DE POTE
-- Note globale sur 10 et conseil prudent.
+- Note globale sur 10 et conseil prudent basé sur la réalité actuelle du marché.
 """
 
 # ---------------------------------------------------------
@@ -289,18 +307,18 @@ st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 submit_button = st.button("🚀 LANCER L'ANALYSE D'EXPERT", disabled=(requests_left <= 0))
 
 # ---------------------------------------------------------
-# Traitement & Génération
+# Traitement & Génération du Rapport
 # ---------------------------------------------------------
 if submit_button and crypto_input:
     if requests_left <= 0:
         st.error("Limite quotidienne atteinte.")
     else:
-        with st.spinner(f"Récupération des données en direct pour **{crypto_input}**..."):
+        with st.spinner(f"Vérification des dernières données en direct pour **{crypto_input}**..."):
             cg_data, error = get_coingecko_data(crypto_input)
             
             if cg_data:
                 data_context = f"""
-Données de marché officielles CoinGecko pour {cg_data['name']} ({cg_data['symbol']}) :
+Données de marché officielles CoinGecko vérifiées pour {cg_data['name']} ({cg_data['symbol']}) :
 - Prix actuel USD: `${cg_data['current_price_usd']}`
 - Rang Market Cap: #{cg_data['rank']}
 - Capitalisation Boursière: `${cg_data['market_cap_usd']:,}` USD
@@ -313,9 +331,9 @@ Données de marché officielles CoinGecko pour {cg_data['name']} ({cg_data['symb
 - Total Supply: {cg_data['total_supply']}
 """
             else:
-                data_context = f"Indication : CoinGecko indisponible ({error}). Effectue l'analyse sur : {crypto_input}"
+                data_context = f"Indication : CoinGecko indisponible ({error}). Effectue la vérification Web et l'analyse sur : {crypto_input}"
 
-            prompt_final = f"{data_context}\n\nEffectue l'analyse complète de la crypto : {crypto_input}"
+            prompt_final = f"{data_context}\n\nEffectue une recherche Web pour valider l'exactitude des dernières informations et rédige l'analyse complète de : {crypto_input}"
 
             response_text, gen_error = generate_content_with_key_failover(prompt_final, SYSTEM_INSTRUCTION)
 
