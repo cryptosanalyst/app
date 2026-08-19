@@ -3,137 +3,34 @@ import google.generativeai as genai
 import requests
 
 # ---------------------------------------------------------
-# 1. Configuration & Design Personnalisé
+# 1. Configuration de la page Streamlit (Interface par Défaut)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cryptos Analyst IA",
     page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="wide"
 )
 
-# Injection CSS (Lisibilité maximale sur fond noir)
+# Style sombre épuré par défaut
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
-
-    /* Fond noir pur et police Montserrat */
-    html, body, [class*="css"], .stMarkdown {
-        font-family: 'Montserrat', sans-serif !important;
-        background-color: #000000 !important;
-        color: #FFFFFF !important;
-    }
-
-    .stApp {
-        background-color: #000000 !important;
-    }
-
-    /* Titre Principal à 1000px max (Responsive pour s'adapter à la largeur) */
-    h1 { 
-        color: rgb(3, 239, 252) !important; 
-        text-align: center; 
-        font-weight: 900 !important; 
-        text-transform: uppercase;
-        font-size: min(1000px, 12vw) !important;
-        line-height: 1 !important;
-        letter-spacing: 1px;
-        margin-bottom: 0.5rem !important;
-    }
-
-    /* Tous les sous-titres en couleur Cyan Néon */
-    h2, h3, h4, h5, h6 {
-        color: rgb(3, 239, 252) !important;
-        font-weight: 700 !important;
-        margin-top: 1.2rem !important;
-        margin-bottom: 0.6rem !important;
-    }
-
-    /* Visibilité totale : Tout le texte explicatif, puces, divs et labels en BLANC PUR */
-    p, li, span, div, label, caption, .stCaption {
-        color: #FFFFFF !important;
-        font-size: 1rem;
-        line-height: 1.6;
-    }
-
-    /* Étiquette du champ de texte en blanc */
-    .stTextInput label {
-        color: #FFFFFF !important;
-        font-weight: 700 !important;
-    }
-
-    /* Champ de saisie : fond sombre, texte BLANC et bordure Cyan */
-    .stTextInput input {
-        background-color: #111111 !important;
-        color: #FFFFFF !important;
-        border: 1px solid rgb(3, 239, 252) !important;
-        border-radius: 8px !important;
-        padding: 12px 15px !important;
-        font-size: 16px !important;
-    }
-
-    /* Texte d'exemple (placeholder) en jaune clair très lisible */
-    .stTextInput input::placeholder {
-        color: #FFE866 !important;
-        opacity: 0.8;
-    }
-
-    /* Bouton Jaune avec Texte STRICTEMENT NOIR */
+    .main { background-color: #0d0e12; color: #e2e8f0; }
+    h1 { color: #ffd700; text-align: center; font-weight: bold; }
     .stButton>button { 
-        background-color: #FFD700 !important; 
-        color: #000000 !important; 
-        font-family: 'Montserrat', sans-serif !important;
-        font-weight: 900 !important; 
+        background-color: #ffd700; 
+        color: #0d0e12; 
+        font-weight: bold; 
         width: 100%; 
-        border-radius: 8px !important; 
+        border-radius: 6px; 
         height: 50px;
-        font-size: 16px !important;
-        border: none !important;
-        transition: all 0.3s ease !important;
-        cursor: pointer;
+        font-size: 16px;
     }
-
-    .stButton>button p, .stButton>button div, .stButton>button span {
-        color: #000000 !important;
-        font-weight: 900 !important;
-    }
-
-    .stButton>button:hover { 
-        background-color: #FFE866 !important; 
-        color: #000000 !important;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.8) !important;
-    }
-
-    .stButton>button:hover p, .stButton>button:hover div, .stButton>button:hover span {
-        color: #000000 !important;
-    }
-
-    /* Carte de résultat lisible */
-    .crypto-card {
-        background: #111111;
-        border: 1px solid rgba(3, 239, 252, 0.4);
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
-        color: #FFFFFF !important;
-    }
-
-    /* Bloc de code pour la copie avec contour Cyan */
-    .stCodeBlock {
-        border: 1px solid rgba(3, 239, 252, 0.3) !important;
-        border-radius: 8px !important;
-        background-color: #080808 !important;
-    }
-
-    /* Masquage des menus système Streamlit */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    .stButton>button:hover { background-color: #ffe866; color: #0d0e12; }
     </style>
 """, unsafe_allow_html=True)
 
-# En-tête
-st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #FFFFFF !important; margin-bottom: 2rem;'>Rapports d'analyse fondamentale en direct alimentés par CoinGecko & Gemini AI.</p>", unsafe_allow_html=True)
+st.title("⚡ Cryptos Analyst IA")
+st.caption("Entrez le nom d'un actif crypto pour obtenir un rapport clair, mis à jour en direct avec CoinGecko et généré par Gemini AI.")
 
 # ---------------------------------------------------------
 # 2. Récupération des Données CoinGecko
@@ -226,17 +123,18 @@ except Exception:
 # ---------------------------------------------------------
 # 5. Interface Utilisateur
 # ---------------------------------------------------------
-col1, col2 = st.columns([3, 1], gap="medium")
+col1, col2 = st.columns([3, 1])
 
 with col1:
     crypto_input = st.text_input(
-        "Actif crypto à analyser :", 
-        placeholder="Saisissez un nom ou ticker (ex: BGB, Solana, ONDO, SUI, Bitcoin...)"
+        "Actif à analyser :", 
+        placeholder="ex: BGB, Solana, ONDO, SUI, Bitcoin..."
     )
 
 with col2:
-    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    submit_button = st.button("🚀 LANCER L'ANALYSE")
+    st.write(" ")
+    st.write(" ")
+    submit_button = st.button("🚀 Lancer l'Analyse")
 
 # ---------------------------------------------------------
 # 6. Traitement & Génération du Rapport
@@ -283,12 +181,12 @@ Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({
                 continue
 
         if response_text:
-            st.markdown("<hr style='border-color: rgba(3, 239, 252, 0.3); margin: 2rem 0;'>", unsafe_allow_html=True)
+            st.markdown("---")
+            st.markdown(response_text)
             
-            st.markdown(f"<div class='crypto-card'>{response_text}</div>", unsafe_allow_html=True)
-            
-            st.markdown("### 📋 Copier le rapport")
-            st.markdown("<p style='color: #FFFFFF !important;'>Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :</p>", unsafe_allow_html=True)
+            st.markdown("---")
+            st.subheader("📋 Copier le rapport")
+            st.caption("Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :")
             st.code(response_text, language="markdown")
         else:
             st.error(f"Erreur lors de la génération : {last_error}")
