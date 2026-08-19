@@ -22,7 +22,7 @@ st.markdown("""
     /* Style pour les prix sans arrière-plan jaune envahissant */
     .stMarkdown code { background-color: transparent !important; color: #ffd700 !important; font-weight: bold !important; font-size: 1.1em !important; }
     /* Citations pédagogiques */
-    blockquote { border-left: 3px solid #ffd700 !important; background-color: #161b22 !important; color: #ffd700 !important; padding: 10px 15px !important; }
+    blockquote { border-left: 3px solid #ffd700 !important; background-color: #ffd700 !important; color: #ffd700 !important; padding: 10px 15px !important; }
     </style>
 """, unsafe_allow_html=True)
 
