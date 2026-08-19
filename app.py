@@ -2,6 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import requests
 from datetime import date
+import os
 
 # ---------------------------------------------------------
 # 1. Configuration de la page Streamlit
@@ -22,23 +23,22 @@ st.markdown("""
     
     .block-container {
         max-width: 850px !important;
-        padding-top: 2.5rem !important;
+        padding-top: 2rem !important;
         padding-bottom: 3rem !important;
         margin: 0 auto !important;
     }
 
-    .avatar-container {
-        text-align: center;
-        margin-bottom: 10px;
+    /* Style de l'image centrée */
+    [data-testid="stImage"] {
+        display: flex;
+        justify-content: center;
     }
-
-    .avatar-img {
-        width: 130px;
-        height: 130px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #ffd700;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    
+    [data-testid="stImage"] img {
+        border-radius: 50% !important;
+        border: 3px solid #ffd700 !important;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.4) !important;
+        object-fit: cover !important;
     }
 
     h1 { 
@@ -110,12 +110,18 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# En-tête avec Avatar
-st.markdown("""
-    <div class='avatar-container'>
-        <img src='https://raw.githubusercontent.com/VOTRE_NOM_GITHUB/VOTRE_DEPOT/main/avatar.jpg' class='avatar-img' alt='Avatar'>
-    </div>
-""", unsafe_allow_html=True)
+# ---------------------------------------------------------
+# En-tête avec Avatar (Détection automatique du fichier)
+# ---------------------------------------------------------
+col_left, col_center, col_right = st.columns([1, 1, 1])
+
+with col_center:
+    if os.path.exists("avatar.jpg"):
+        st.image("avatar.jpg", width=130)
+    elif os.path.exists("avatar.jpeg"):
+        st.image("avatar.jpeg", width=130)
+    elif os.path.exists("avatar.png"):
+        st.image("avatar.png", width=130)
 
 st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
@@ -176,19 +182,16 @@ def get_coingecko_data(query):
 # OPTION C : Système de Rotation sur 5 Clés API Gemini
 # ---------------------------------------------------------
 def get_gemini_api_keys():
-    """Récupère toutes les clés API disponibles déclarées dans les secrets."""
     keys = []
-    # Clé standard unique (rétrocompatibilité)
     if "GEMINI_API_KEY" in st.secrets:
         keys.append(st.secrets["GEMINI_API_KEY"])
     
-    # Numérotation de 1 à 5
     for i in range(1, 6):
         key_name = f"GEMINI_API_KEY_{i}"
         if key_name in st.secrets:
             keys.append(st.secrets[key_name])
             
-    return list(dict.fromkeys(keys)) # Supprime d'éventuels doublons
+    return list(dict.fromkeys(keys))
 
 gemini_keys = get_gemini_api_keys()
 
@@ -197,7 +200,6 @@ if not gemini_keys:
     st.stop()
 
 def generate_content_with_key_failover(prompt_text, system_instruction):
-    """Essaye les clés Gemini les unes après les autres si une limite est atteinte."""
     candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
     last_err = None
 
@@ -216,7 +218,6 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
                     last_err = model_err
                     continue
         except Exception as key_err:
-            # Si quota dépassé ou clé bloquée, passe à la clé suivante
             last_err = key_err
             continue
 
@@ -264,7 +265,6 @@ crypto_input = st.text_input(
     placeholder="Tape un ticker ou un nom (ex: BGB, Solana, ONDO, SUI, Bitcoin...)"
 )
 
-# Indication des crédits restants
 if requests_left > 0:
     st.caption(f"⚡ Crédits gratuits restants pour aujourd'hui : **{requests_left} / 2**")
 else:
@@ -302,11 +302,9 @@ Données de marché officielles CoinGecko pour {cg_data['name']} ({cg_data['symb
 
             prompt_final = f"{data_context}\n\nEffectue l'analyse complète de la crypto : {crypto_input}"
 
-            # Appel avec basculement automatique sur les 5 clés
             response_text, gen_error = generate_content_with_key_failover(prompt_final, SYSTEM_INSTRUCTION)
 
             if response_text:
-                # Décrémenter le crédit journalier de l'utilisateur
                 st.session_state.daily_request_count += 1
                 
                 st.markdown("<hr style='border-color: #30363d; margin: 2rem 0;'>", unsafe_allow_html=True)
