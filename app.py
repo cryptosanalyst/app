@@ -11,36 +11,36 @@ st.set_page_config(
     layout="wide"
 )
 
-# Style CSS : Centrage propre, pas de débordement, design sombre moderne
+# Style CSS pour une lisibilité maximale sur l'interface par défaut
 st.markdown("""
     <style>
-    /* Fond principal sombre */
-    .main { background-color: #0d0e12; color: #e2e8f0; }
-
-    /* Centrage du conteneur principal */
+    .main { background-color: #0d0e12; color: #f0f6fc; }
+    
+    /* Conteneur principal centré */
     .block-container {
         max-width: 850px !important;
-        padding-top: 2rem !important;
+        padding-top: 2.5rem !important;
         padding-bottom: 3rem !important;
         margin: 0 auto !important;
     }
 
-    /* Titre centré */
     h1 { 
         color: #ffd700; 
         text-align: center; 
-        font-weight: 800;
-        margin-bottom: 0.2rem !important;
+        font-weight: bold;
+        margin-bottom: 0.5rem !important;
     }
 
-    .subtitle {
+    .welcome-msg {
         text-align: center;
-        color: #a0aec0;
-        font-size: 1rem;
+        color: #e2e8f0;
+        font-size: 1.15rem;
+        font-weight: 500;
         margin-bottom: 2rem;
+        line-height: 1.5;
     }
 
-    /* Formulaire centré */
+    /* Champ de saisie */
     .stTextInput > label {
         display: block;
         text-align: center;
@@ -51,13 +51,14 @@ st.markdown("""
 
     .stTextInput > div > div > input {
         text-align: center;
-        background-color: #1a1d24;
+        background-color: #161b22;
         color: #ffffff;
         border: 1px solid #30363d;
         border-radius: 8px;
+        font-size: 16px;
     }
 
-    /* Bouton centré */
+    /* Bouton d'action */
     .stButton>button { 
         background-color: #ffd700; 
         color: #0d0e12; 
@@ -75,27 +76,12 @@ st.markdown("""
         color: #0d0e12;
         box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
     }
-
-    /* Encadrement du rapport */
-    .report-container {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 12px;
-        padding: 25px;
-        margin-top: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-
-    /* Ajustement des blocs de code */
-    .stCodeBlock {
-        border-radius: 8px;
-    }
     </style>
 """, unsafe_allow_html=True)
 
-# En-tête centré
+# En-tête & Message d'accueil
 st.markdown("<h1>⚡ Cryptos Analyst IA</h1>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Rapports d'analyse fondamentale en direct alimentés par CoinGecko & Gemini AI.</div>", unsafe_allow_html=True)
+st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # 2. Récupération des Données CoinGecko
@@ -141,7 +127,7 @@ def get_coingecko_data(query):
 # 3. Instruction Système Gemini (Ton Familier, Chaleureux & Expert)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un analyste financier senior passionné par la crypto, mais tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel, comme un grand frère ou un pote expert qui explique un projet autour d'un café). 
+Tu es un analyste financier senior passionné par la crypto, mais tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel, comme un pote expert qui explique un projet autour d'un café). 
 
 Ton style est **ultra-pédagogique et informatif** : tu dois expliquer le fond du sujet avec la précision d'un analyste institutionnel, mais en utilisant des mots simples, des analogies de la vie courante et une touche d'humour bienveillante.
 
@@ -199,7 +185,7 @@ st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 submit_button = st.button("🚀 LANCER L'ANALYSE D'EXPERT")
 
 # ---------------------------------------------------------
-# 6. Traitement & Génération
+# 6. Traitement & Génération du Rapport
 # ---------------------------------------------------------
 if submit_button and crypto_input:
     with st.spinner(f"Attends deux secondes, je récupère les données fraîches de **{crypto_input}** et je te prépare ça..."):
@@ -245,7 +231,7 @@ Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({
         if response_text:
             st.markdown("<hr style='border-color: #30363d; margin: 2rem 0;'>", unsafe_allow_html=True)
             
-            # Affichage du rapport dans une carte épurée
+            # Affichage du rapport
             st.markdown(response_text)
             
             st.markdown("---")
