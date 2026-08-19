@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Style CSS : Centrage absolu responsive
+# Style CSS : Centrage absolu responsive & thème sombre
 st.markdown("""
     <style>
     stApp, .main, [data-testid="stAppViewContainer"] {
@@ -29,7 +29,7 @@ st.markdown("""
         margin: 0 auto !important;
     }
 
-    /* Centrage parfait de l'avatar sur tous les écrans */
+    /* Centrage parfait de l'avatar */
     .avatar-wrapper {
         display: flex;
         justify-content: center;
@@ -117,7 +117,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Fonction d'affichage de l'Avatar en Base64 (100% Responsive)
+# Affichage de l'Avatar en Base64
 # ---------------------------------------------------------
 def get_image_base64(file_path):
     with open(file_path, "rb") as f:
@@ -139,10 +139,10 @@ if avatar_filename:
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
-st.markdown("<div class='welcome-msg'>Bienvenu(e) je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
+st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# OPTION A : Limite de 2 requêtes / jour par session
+# OPTION A : Gestion de la limite de 2 requêtes / jour par session
 # ---------------------------------------------------------
 TODAY = str(date.today())
 
@@ -153,9 +153,9 @@ if "last_access_date" not in st.session_state or st.session_state.last_access_da
 requests_left = 2 - st.session_state.daily_request_count
 
 # ---------------------------------------------------------
-# OPTION B : Cache CoinGecko (10 min)
+# OPTION B : Cache CoinGecko (12 Heures = 43200 secondes)
 # ---------------------------------------------------------
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=43200)
 def get_coingecko_data(query):
     try:
         search_url = f"https://api.coingecko.com/api/v3/search?query={query}"
