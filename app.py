@@ -1,16 +1,17 @@
 import streamlit as st
 import google.generativeai as genai
+import requests
 
 # ---------------------------------------------------------
 # 1. Configuration de la page Streamlit & Style Montserrat
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Crypto Analyst AI — Rapport Pédagogique",
+    page_title="Crypto Analyst AI — Rapport Institutionnel & CoinGecko",
     page_icon="⚡",
     layout="wide"
 )
 
-# Chargement de la police Montserrat et application du style
+# Style sombre avec police Montserrat
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
@@ -56,53 +57,92 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Crypto Analyst AI")
-st.caption("Entrez le nom d'un actif crypto pour obtenir un rapport clair, mis à jour en temps réel et facile à lire.")
+st.caption("Analyses fondamentales rédigées par Gemini avec données de marché en direct fournies par CoinGecko.")
 
 # ---------------------------------------------------------
-# 2. Le Prompt Maître (Pédagogique + Exigence de Données Fraîches)
+# 2. Fonction de récupération des données CoinGecko API
+# ---------------------------------------------------------
+def get_coingecko_data(query):
+    """Recherche la crypto sur CoinGecko et retourne ses données en temps réel."""
+    try:
+        # Étape A: Recherche de l'ID CoinGecko correspondant au terme tapé (ex: "bgb" -> "bitget-token")
+        search_url = f"https://api.coingecko.com/api/v3/search?query={query}"
+        search_res = requests.get(search_url, timeout=10).json()
+        
+        coins = search_res.get("coins", [])
+        if not coins:
+            return None, "Crypto non trouvée sur CoinGecko."
+        
+        coin_id = coins[0]["id"]  # Prend le premier résultat le plus pertinent
+        
+        # Étape B: Récupération des données détaillées
+        data_url = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
+        coin_data = requests.get(data_url, timeout=10).json()
+        
+        market = coin_data.get("market_data", {})
+        
+        # Extraction des métriques clés
+        result = {
+            "name": coin_data.get("name"),
+            "symbol": coin_data.get("symbol", "").upper(),
+            "rank": coin_data.get("market_cap_rank"),
+            "current_price_usd": market.get("current_price", {}).get("usd"),
+            "market_cap_usd": market.get("market_cap", {}).get("usd"),
+            "total_volume_24h": market.get("total_volume", {}).get("usd"),
+            "price_change_24h_pct": market.get("price_change_percentage_24h"),
+            "price_change_7d_pct": market.get("price_change_percentage_7d"),
+            "ath_usd": market.get("ath", {}).get("usd"),
+            "ath_date": market.get("ath_date", {}).get("usd"),
+            "atl_usd": market.get("atl", {}).get("usd"),
+            "atl_date": market.get("atl_date", {}).get("usd"),
+            "circulating_supply": market.get("circulating_supply"),
+            "total_supply": market.get("total_supply"),
+            "max_supply": market.get("max_supply")
+        }
+        return result, None
+    except Exception as e:
+        return None, f"Erreur de connexion CoinGecko : {str(e)}"
+
+# ---------------------------------------------------------
+# 3. Instruction Système Pédagogique
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un expert senior en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en fournissant des **informations ultra-récentes et vérifiées**.
+Tu es un expert senior en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en fournissant une analyse fondamentale ultra-précise basée sur les données chiffrées en direct fournies et sur tes connaissances d'actualités récentes.
 
-IMPORTANT - RECHERCHE WEB & MISA À JOUR :
-- Utilise toujours la recherche Google pour vérifier le prix exact, le Market Cap, les ATH/ATL, ainsi que les DÉVELOPPEMENTS STRATÉGIQUES RÉCENTS du projet.
-- Mentionne explicitement les évolutions majeures de l'écosystème (ex: s'il s'agit d'un CEX évoluant vers un Universal Exchange UEX, l'intégration à une blockchain Layer 2 comme Morph pour payer le gaz, les produits tokenisés, etc.).
-- Identifie les actualités récentes ou événements à venir pouvant impacter le cours (positivement ou négativement).
+Règles importantes :
+- Utilise en priorité les métriques chiffrées exactes transmises depuis l'API CoinGecko.
+- N'hésite pas à mentionner les évolutions stratégiques récentes du projet (ex: pour BGB/Bitget, mentionne l'évolution vers un Universal Exchange UEX, l'intégration de la Layer 2 Morph où BGB sert de jeton de gaz, etc.).
+- Utilise des mots simples. Explique tout terme technique (Tokenomics, Layer 2, Staking, Burn, Market Cap, UEX) avec une analogie simple de la vie courante.
+- Ton pédagogique, bienveillant et structuré avec des puces.
 
-Règles de rédaction :
-- Utilise des mots simples. Si tu emploies un terme technique (ex: Tokenomics, Layer 2, Staking, Burn, UEX, Market Cap), explique-le immédiatement avec une analogie simple de la vie courante.
-- Structure le contenu clairement avec du gras et des puces.
-- Adopte un ton pédagogique, bienveillant et direct.
-
-Structure de l'analyse à suivre rigoureusement :
+Structure de l'analyse :
 
 1. 📌 C'EST QUOI CE PROJET ? (RÉSUMÉ SIMPLE & ÉVOLUTION RÉCENTE)
-- Explique ce que fait le projet comme si tu l'expliquais à un ami qui n'y connaît rien.
-- Quelle est sa catégorie et son évolution récente (ex: CEX vers UEX, intégration Layer 2, etc.) ?
-- Ton verdict rapide : Intéressant, Moyen ou Risqué ?
+- Description simple comme pour un ami novice.
+- Catégorie & évolutions récentes importantes (ex: CEX vers UEX, intégration Layer 2, etc.).
+- Verdict rapide : Intéressant, Moyen ou Risqué.
 
-2. 📊 LES CHIFFRES CLÉS (PRIX & TOKENOMICS EN DIRECT)
-- Prix actuel & Valeur totale du projet (Market Cap) vérifiés sur le Web.
-- Plus haut prix historique (ATH) et plus bas (ATL) avec dates.
-- Quantité de jetons disponibles, mécanismes de brûlage (Burn) ou d'utilité On-Chain (frais de gaz, staking).
+2. 📊 CHIFFRES CLÉS COINGECKO (DONNÉES EN DIRECT)
+- Présente le prix actuel, le classement, le Market Cap et les variations récentes.
+- Mentionne les ATH/ATL historiques et la situation de l'offre (Circulating vs Max Supply, burn).
 
-3. 🚀 LES CATALYSEURS & DERNIÈRES ACTUALITÉS (MOTEURS DE HAUSSE)
-- Les partenariats récents, nouvelles fonctionnalités ou intégrations technologiques.
-- Comment le jeton gagne-t-il de la valeur concrètement grâce aux usages récents ?
+3. 🚀 CATALYSEURS & DERNIÈRES ACTUALITÉS (MOTEURS DE HAUSSE)
+- Pourquoi le projet peut-il prendre de la valeur ?
+- Les cas d'utilisation concrets du jeton (frais de gaz, réductions, staking, etc.).
 
-4. ⚠️ LES RISQUES ET FREINS À SURVEILLER
-- Les risques récents (régulation, concurrence, déblocage de jetons/vesting, dépendance centralisée).
+4. ⚠️ RISQUES ET FREINS À SURVEILLER
+- Concurrence, régulation, calendrier de déblocage (vesting), ou dépendance à une entreprise centralisée.
 
 5. ⚔️ COMPARATIF SIMPLIFIÉ
-- Un petit comparatif simple avec 2 à 3 projets concurrents directs.
+- Comparaison rapide avec 2 ou 3 concurrents directs.
 
-6. 🎯 VERDICT ET CONSEIL SIMPLE
-- Une note sur 10 basée sur la solidité du projet.
-- Une recommandation prudente avec 2 à 3 métriques clés à surveiller.
+6. 🎯 VERDICT ET RECOMMANDATION
+- Note globale sur 10.
+- Conseil prudent pour un débutant et métriques clés à surveiller.
 """
 
 # ---------------------------------------------------------
-# 3. Initialisation de l'API Gemini
+# 4. Initialisation Gemini API
 # ---------------------------------------------------------
 try:
     gemini_api_key = st.secrets["GEMINI_API_KEY"]
@@ -112,7 +152,7 @@ except Exception:
     st.stop()
 
 # ---------------------------------------------------------
-# 4. Interface Utilisateur
+# 5. Interface Utilisateur
 # ---------------------------------------------------------
 col1, col2 = st.columns([3, 1])
 
@@ -128,42 +168,50 @@ with col2:
     submit_button = st.button("🚀 Lancer l'Analyse")
 
 # ---------------------------------------------------------
-# 5. Traitement avec Recherche Web Active
+# 6. Exécution : CoinGecko + Gemini
 # ---------------------------------------------------------
 if submit_button and crypto_input:
-    with st.spinner(f"Recherche Web en direct et analyse simplifiée de **{crypto_input}** en cours..."):
+    with st.spinner(f"1/2 : Récupération des métriques CoinGecko pour **{crypto_input}**..."):
+        cg_data, error = get_coingecko_data(crypto_input)
+    
+    with st.spinner(f"2/2 : Génération de l'analyse fondamentale par Gemini..."):
+        # Formulation du prompt avec injection des données CoinGecko
+        if cg_data:
+            data_context = f"""
+Voici les données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({cg_data['symbol']}) :
+- Prix actuel USD: ${cg_data['current_price_usd']}
+- Rang Market Cap: #{cg_data['rank']}
+- Capitalisation Boursière: ${cg_data['market_cap_usd']:,} USD
+- Volume 24h: ${cg_data['total_volume_24h']:,} USD
+- Variation 24h: {cg_data['price_change_24h_pct']}%
+- Variation 7 jours: {cg_data['price_change_7d_pct']}%
+- Plus haut historique (ATH): ${cg_data['ath_usd']} (Date: {cg_data['ath_date']})
+- Plus bas historique (ATL): ${cg_data['atl_usd']} (Date: {cg_data['atl_date']})
+- Offre en circulation: {cg_data['circulating_supply']}
+- Total Supply: {cg_data['total_supply']}
+- Max Supply: {cg_data['max_supply']}
+"""
+        else:
+            data_context = f"Impossible de récupérer l'API CoinGecko ({error}). Effectue l'analyse avec tes données sur l'actif : {crypto_input}"
+
+        prompt_final = f"{data_context}\n\nEffectue l'analyse complète et pédagogique de l'actif crypto : {crypto_input}"
+
         candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
-        
         response_text = None
         last_error = None
 
         for model_name in candidate_models:
             try:
-                # Configuration du modèle avec l'outil de recherche Google Search en direct
                 model = genai.GenerativeModel(
                     model_name=model_name,
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    tools=['google_search_retrieval']  # Active la recherche Web en direct dans le SDK
+                    system_instruction=SYSTEM_INSTRUCTION
                 )
-                
-                prompt_utilisateur = f"Recherche les dernières informations en direct et effectue une analyse complète et mise à jour de la crypto : {crypto_input}"
-                response = model.generate_content(prompt_utilisateur)
+                response = model.generate_content(prompt_final)
                 response_text = response.text
                 break
             except Exception as e:
-                # Si l'outil de recherche spécifique renvoie une erreur sur le modèle, test sans l'argument direct
-                try:
-                    model = genai.GenerativeModel(
-                        model_name=model_name,
-                        system_instruction=SYSTEM_INSTRUCTION
-                    )
-                    prompt_utilisateur = f"Effectue une analyse complète, pédagogique et incluant les dernières informations récentes et prix actuels de : {crypto_input}"
-                    response = model.generate_content(prompt_utilisateur)
-                    response_text = response.text
-                    break
-                except Exception as inner_e:
-                    last_error = inner_e
-                    continue
+                last_error = e
+                continue
 
         if response_text:
             st.markdown("---")
