@@ -3,7 +3,7 @@ import google.generativeai as genai
 import requests
 
 # ---------------------------------------------------------
-# 1. Configuration de la page Streamlit (Interface par Défaut)
+# 1. Configuration de la page Streamlit
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cryptos Analyst IA",
@@ -11,26 +11,91 @@ st.set_page_config(
     layout="wide"
 )
 
-# Style sombre épuré par défaut
+# Style CSS : Centrage propre, pas de débordement, design sombre moderne
 st.markdown("""
     <style>
+    /* Fond principal sombre */
     .main { background-color: #0d0e12; color: #e2e8f0; }
-    h1 { color: #ffd700; text-align: center; font-weight: bold; }
+
+    /* Centrage du conteneur principal */
+    .block-container {
+        max-width: 850px !important;
+        padding-top: 2rem !important;
+        padding-bottom: 3rem !important;
+        margin: 0 auto !important;
+    }
+
+    /* Titre centré */
+    h1 { 
+        color: #ffd700; 
+        text-align: center; 
+        font-weight: 800;
+        margin-bottom: 0.2rem !important;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #a0aec0;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    /* Formulaire centré */
+    .stTextInput > label {
+        display: block;
+        text-align: center;
+        font-weight: bold;
+        color: #ffd700;
+        font-size: 1.05rem;
+    }
+
+    .stTextInput > div > div > input {
+        text-align: center;
+        background-color: #1a1d24;
+        color: #ffffff;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+    }
+
+    /* Bouton centré */
     .stButton>button { 
         background-color: #ffd700; 
         color: #0d0e12; 
         font-weight: bold; 
         width: 100%; 
-        border-radius: 6px; 
+        border-radius: 8px; 
         height: 50px;
         font-size: 16px;
+        border: none;
+        transition: all 0.3s ease;
     }
-    .stButton>button:hover { background-color: #ffe866; color: #0d0e12; }
+
+    .stButton>button:hover { 
+        background-color: #ffe866; 
+        color: #0d0e12;
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+    }
+
+    /* Encadrement du rapport */
+    .report-container {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        padding: 25px;
+        margin-top: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Ajustement des blocs de code */
+    .stCodeBlock {
+        border-radius: 8px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("⚡ Cryptos Analyst IA")
-st.caption("Entrez le nom d'un actif crypto pour obtenir un rapport clair, mis à jour en direct avec CoinGecko et généré par Gemini AI.")
+# En-tête centré
+st.markdown("<h1>⚡ Cryptos Analyst IA</h1>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Rapports d'analyse fondamentale en direct alimentés par CoinGecko & Gemini AI.</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # 2. Récupération des Données CoinGecko
@@ -73,41 +138,43 @@ def get_coingecko_data(query):
         return None, f"Erreur CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# 3. Instruction Système Gemini
+# 3. Instruction Système Gemini (Ton Familier, Chaleureux & Expert)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un expert senior en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en fournissant une analyse fondamentale ultra-précise.
+Tu es un analyste financier senior passionné par la crypto, mais tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel, comme un grand frère ou un pote expert qui explique un projet autour d'un café). 
 
-Règles importantes :
-- Utilise en priorité les métriques chiffrées exactes transmises depuis l'API CoinGecko.
-- Mentionne les évolutions stratégiques récentes du projet (ex: pour BGB/Bitget, mentionne l'évolution vers un Universal Exchange UEX, l'intégration de la Layer 2 Morph où BGB sert de jeton de gaz, etc.).
-- Utilise des mots simples. Explique tout terme technique (Tokenomics, Layer 2, Staking, Burn, Market Cap, UEX) avec une analogie simple de la vie courante.
-- Ton pédagogique, bienveillant et structuré avec des puces.
+Ton style est **ultra-pédagogique et informatif** : tu dois expliquer le fond du sujet avec la précision d'un analyste institutionnel, mais en utilisant des mots simples, des analogies de la vie courante et une touche d'humour bienveillante.
 
-Structure de l'analyse :
+Règles impératives :
+- Utilise le tutoiement ("tu", "ton", "tes").
+- Intègre impérativement les métriques chiffrées exactes transmises par CoinGecko.
+- Sois à jour sur l'écosystème récent (ex: si tu analyses BGB/Bitget, parle de l'évolution vers un Universal Exchange UEX, l'intégration du Layer 2 Morph où BGB sert de jeton de gaz, etc.).
+- Explique immédiatement chaque notion complexe (Market Cap, Tokenomics, Layer 2, Staking, Burn, Vesting).
 
-1. 📌 C'EST QUOI CE PROJET ? (RÉSUMÉ SIMPLE & ÉVOLUTION RÉCENTE)
-- Description simple comme pour un ami novice.
-- Catégorie & évolutions récentes importantes (ex: CEX vers UEX, intégration Layer 2, etc.).
-- Verdict rapide : Intéressant, Moyen ou Risqué.
+Structure de ton rapport :
 
-2. 📊 CHIFFRES CLÉS COINGECKO (DONNÉES EN DIRECT)
-- Présente le prix actuel, le classement, le Market Cap et les variations récentes.
-- Mentionne les ATH/ATL historiques et la situation de l'offre (Circulating vs Max Supply, burn).
+1. 📌 C'EST QUOI CE PROJET CONCRÈTEMENT ?
+- Présentation simple, directe et chaleureuse du projet.
+- Catégorie & évolutions récentes majeures (ex: CEX vers UEX, intégration Layer 2, etc.).
+- Ton petit verdict à chaud : PÉPITE / PROJET SOLIDE / ATTENTION DANGER ?
 
-3. 🚀 CATALYSEURS & DERNIÈRES ACTUALITÉS (MOTEURS DE HAUSSE)
-- Pourquoi le projet peut-il prendre de la valeur ?
-- Les cas d'utilisation concrets du jeton (frais de gaz, réductions, staking, etc.).
+2. 📊 LES CHIFFRES EN DIRECT (GARDONS UN ŒIL SUR LE COUNTER)
+- Présente le prix, le classement, la Market Cap et les mouvements récents (24h/7j).
+- Un mot sur l'ATH/ATL et l'état des stocks de jetons (Supply circulante vs Max Supply, burn).
 
-4. ⚠️ RISQUES ET FREINS À SURVEILLER
-- Concurrence, régulation, calendrier de déblocage (vesting), ou dépendance à une entreprise centralisée.
+3. 🚀 LES GROS MOTEURS DE HAUSSE (POURQUOI ÇA PEUT IMPLOSER EN HAUSSE ?)
+- À quoi sert vraiment le jeton dans la vie de tous les jours (frais de gaz, réductions, staking) ?
+- Les vrais catalyseurs et actualités du moment.
 
-5. ⚔️ COMPARATIF SIMPLIFIÉ
-- Comparaison rapide avec 2 ou 3 concurrents directs.
+4. ⚠️ LES PIÈGES ET RISQUES À NE PAS IGNORER
+- Ce qui pourrait mal tourner (concurrence, régulation, jetons bloqués/vesting, centralisation).
 
-6. 🎯 VERDICT ET RECOMMANDATION
-- Note globale sur 10.
-- Conseil prudent pour un débutant et métriques clés à surveiller.
+5. ⚔️ COMPARATIF AVEC LA CONCURRENCE
+- Petit comparatif rapide et pertinent avec 2-3 concurrents du secteur.
+
+6. 🎯 MON VERDICT & MON CONSEIL DE POTE
+- Ta note globale sur 10.
+- Ton conseil tactique et prudent pour un débutant, avec 2-3 indicateurs clés à surveiller régulièrement.
 """
 
 # ---------------------------------------------------------
@@ -123,24 +190,19 @@ except Exception:
 # ---------------------------------------------------------
 # 5. Interface Utilisateur
 # ---------------------------------------------------------
-col1, col2 = st.columns([3, 1])
+crypto_input = st.text_input(
+    "Quelle crypto veux-tu décortiquer aujourd'hui ?", 
+    placeholder="Tape un ticker ou un nom (ex: BGB, Solana, ONDO, SUI, Bitcoin...)"
+)
 
-with col1:
-    crypto_input = st.text_input(
-        "Actif à analyser :", 
-        placeholder="ex: BGB, Solana, ONDO, SUI, Bitcoin..."
-    )
-
-with col2:
-    st.write(" ")
-    st.write(" ")
-    submit_button = st.button("🚀 Lancer l'Analyse")
+st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+submit_button = st.button("🚀 LANCER L'ANALYSE D'EXPERT")
 
 # ---------------------------------------------------------
-# 6. Traitement & Génération du Rapport
+# 6. Traitement & Génération
 # ---------------------------------------------------------
 if submit_button and crypto_input:
-    with st.spinner(f"Récupération des métriques et analyse en cours pour **{crypto_input}**..."):
+    with st.spinner(f"Attends deux secondes, je récupère les données fraîches de **{crypto_input}** et je te prépare ça..."):
         cg_data, error = get_coingecko_data(crypto_input)
         
         if cg_data:
@@ -161,7 +223,7 @@ Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({
         else:
             data_context = f"Indication : CoinGecko indisponible ({error}). Effectue l'analyse avec tes données sur : {crypto_input}"
 
-        prompt_final = f"{data_context}\n\nEffectue l'analyse complète et pédagogique de l'actif crypto : {crypto_input}"
+        prompt_final = f"{data_context}\n\nEffectue l'analyse complète, chaleureuse et pédagogique de la crypto : {crypto_input}"
 
         candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
         response_text = None
@@ -181,12 +243,14 @@ Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({
                 continue
 
         if response_text:
-            st.markdown("---")
+            st.markdown("<hr style='border-color: #30363d; margin: 2rem 0;'>", unsafe_allow_html=True)
+            
+            # Affichage du rapport dans une carte épurée
             st.markdown(response_text)
             
             st.markdown("---")
-            st.subheader("📋 Copier le rapport")
-            st.caption("Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :")
+            st.markdown("### 📋 Copier le rapport")
+            st.caption("Passe ta souris sur le bloc ci-dessous et clique sur le bouton de copie en haut à droite :")
             st.code(response_text, language="markdown")
         else:
-            st.error(f"Erreur lors de la génération : {last_error}")
+            st.error(f"Oups ! Une erreur est survenue lors de la génération : {last_error}")
