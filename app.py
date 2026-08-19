@@ -194,7 +194,7 @@ def get_coingecko_data(query):
         return None, f"Erreur CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# OPTION C : Rotation sur 5 Clés API avec Recherche Web Active
+# OPTION C : Rotation sur les Clés API Gemini + Auto-Détection des Modèles
 # ---------------------------------------------------------
 def get_gemini_api_keys():
     keys = []
@@ -214,16 +214,33 @@ if not gemini_keys:
     st.error("⚠️ Aucune clé API Gemini n'a été configurée dans secrets.toml.")
     st.stop()
 
+def get_active_models_for_key(api_key):
+    """Interroge l'API pour lister les modèles réels disponibles pour cette clé."""
+    try:
+        genai.configure(api_key=api_key)
+        available = [
+            m.name for m in genai.list_models() 
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        # Trie pour mettre en priorité les modèles flash légers et rapides
+        flash_models = [m for m in available if 'flash' in m]
+        other_models = [m for m in available if 'flash' not in m]
+        return flash_models + other_models
+    except Exception:
+        # Modèles de secours par défaut en cas d'erreur de listing
+        return ["models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-1.5-flash"]
+
 def generate_content_with_key_failover(prompt_text, system_instruction):
-    # Utilisation des modèles Gemini
-    candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
-    last_err = None
+    last_err = "Aucune réponse générée."
 
     for api_key in gemini_keys:
-        try:
-            genai.configure(api_key=api_key)
-            for model_name in candidate_models:
-                # 1. Tentative avec l'outil de Recherche Web en direct (Search Grounding)
+        active_models = get_active_models_for_key(api_key)
+        
+        for model_name in active_models:
+            try:
+                genai.configure(api_key=api_key)
+                
+                # Tentative avec Search Grounding si supporté
                 try:
                     model = genai.GenerativeModel(
                         model_name=model_name,
@@ -231,27 +248,26 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
                         tools=['google_search_retrieval']
                     )
                     response = model.generate_content(prompt_text)
-                    return response.text, None
-                except Exception:
-                    # 2. Reconstitution standard si le composant tools spécifique varie
-                    try:
-                        model = genai.GenerativeModel(
-                            model_name=model_name,
-                            system_instruction=system_instruction
-                        )
-                        response = model.generate_content(prompt_text)
+                    if response and response.text:
                         return response.text, None
-                    except Exception as inner_err:
-                        last_err = inner_err
-                        continue
-        except Exception as key_err:
-            last_err = key_err
-            continue
+                except Exception:
+                    # Tentative standard sans outil explicite
+                    model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=system_instruction
+                    )
+                    response = model.generate_content(prompt_text)
+                    if response and response.text:
+                        return response.text, None
+
+            except Exception as model_err:
+                last_err = str(model_err)
+                continue
 
     return None, last_err
 
 # ---------------------------------------------------------
-# Prompt Système Strict (Exactitude & Dernières Mises à Jour)
+# Prompt Système Strict
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Tu es un analyste financier senior passionné par la crypto. Tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel).
@@ -347,4 +363,4 @@ Données de marché officielles CoinGecko vérifiées pour {cg_data['name']} ({c
                 st.markdown("### 📋 Copier le rapport")
                 st.code(response_text, language="markdown")
             else:
-                st.error(f"Désolé, l'agent IA est très sollicité en ce moment. Réessaie dans quelques minutes. Erreur : {gen_error}")
+                st.error(f"Désolé, l'agent IA rencontre un souci avec l'API Gemini : {gen_error}")
