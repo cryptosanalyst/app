@@ -3,6 +3,7 @@ import google.generativeai as genai
 import requests
 from datetime import date
 import os
+import base64
 
 # ---------------------------------------------------------
 # 1. Configuration de la page Streamlit
@@ -13,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Style CSS
+# Style CSS : Centrage absolu responsive
 st.markdown("""
     <style>
     stApp, .main, [data-testid="stAppViewContainer"] {
@@ -28,13 +29,18 @@ st.markdown("""
         margin: 0 auto !important;
     }
 
-    /* Style de l'image centrée */
-    [data-testid="stImage"] {
+    /* Centrage parfait de l'avatar sur tous les écrans */
+    .avatar-wrapper {
         display: flex;
         justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 15px;
     }
-    
-    [data-testid="stImage"] img {
+
+    .avatar-wrapper img {
+        width: 120px !important;
+        height: 120px !important;
         border-radius: 50% !important;
         border: 3px solid #ffd700 !important;
         box-shadow: 0 0 15px rgba(255, 215, 0, 0.4) !important;
@@ -111,23 +117,32 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# En-tête avec Avatar (Détection automatique du fichier)
+# Fonction d'affichage de l'Avatar en Base64 (100% Responsive)
 # ---------------------------------------------------------
-col_left, col_center, col_right = st.columns([1, 1, 1])
+def get_image_base64(file_path):
+    with open(file_path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
-with col_center:
-    if os.path.exists("avatar.jpg"):
-        st.image("avatar.jpg", width=130)
-    elif os.path.exists("avatar.jpeg"):
-        st.image("avatar.jpeg", width=130)
-    elif os.path.exists("avatar.png"):
-        st.image("avatar.png", width=130)
+avatar_filename = None
+for filename in ["avatar.jpg", "avatar.jpeg", "avatar.png"]:
+    if os.path.exists(filename):
+        avatar_filename = filename
+        break
+
+if avatar_filename:
+    img_b64 = get_image_base64(avatar_filename)
+    st.markdown(f"""
+        <div class="avatar-wrapper">
+            <img src="data:image/jpeg;base64,{img_b64}" alt="Avatar">
+        </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# OPTION A : Gestion de la limite de 2 requêtes / jour par session
+# OPTION A : Limite de 2 requêtes / jour par session
 # ---------------------------------------------------------
 TODAY = str(date.today())
 
@@ -138,7 +153,7 @@ if "last_access_date" not in st.session_state or st.session_state.last_access_da
 requests_left = 2 - st.session_state.daily_request_count
 
 # ---------------------------------------------------------
-# OPTION B : Cache CoinGecko (Valide 10 min / 600 sec)
+# OPTION B : Cache CoinGecko (10 min)
 # ---------------------------------------------------------
 @st.cache_data(ttl=600)
 def get_coingecko_data(query):
