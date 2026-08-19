@@ -88,7 +88,7 @@ Structure de l'analyse à suivre rigoureusement :
 4. ⚠️ LES RISQUES À CONNAÎTRE (AVANT D'INVESTIR)
 - Quels sont les pièges ou les dangers (concurrence, régulation, jetons bloqués) ?
 
-5. ⚔️ COMPARISON AVEC LES CONCURRENTS
+5. ⚔️ COMPARATIVE AVEC LES CONCURRENTS
 - Un petit tableau ou comparatif simple avec 2 à 3 projets connus du même domaine.
 
 6. 🎯 VERDICT ET CONSEIL SIMPLE
@@ -97,7 +97,7 @@ Structure de l'analyse à suivre rigoureusement :
 """
 
 # ---------------------------------------------------------
-# 3. Initialisation de l'API Gemini & Détection Automatique
+# 3. Initialisation de l'API Gemini
 # ---------------------------------------------------------
 try:
     gemini_api_key = st.secrets["GEMINI_API_KEY"]
@@ -105,26 +105,6 @@ try:
 except Exception:
     st.error("⚠️ Clé API Gemini manquante. Veuillez vérifier votre fichier secrets.toml.")
     st.stop()
-
-def get_available_model():
-    """Récupère automatiquement la liste des modèles actifs sur la clé API."""
-    try:
-        models = [
-            m.name for m in genai.list_models() 
-            if 'generateContent' in m.supported_generation_methods
-        ]
-        # Priorité aux modèles Flash puis Pro
-        for m in models:
-            if 'flash' in m:
-                return m
-        for m in models:
-            if 'pro' in m:
-                return m
-        if models:
-            return models[0]
-    except Exception:
-        pass
-    return "gemini-1.5-flash-latest"
 
 # ---------------------------------------------------------
 # 4. Interface Utilisateur
@@ -143,28 +123,37 @@ with col2:
     submit_button = st.button("🚀 Lancer l'Analyse")
 
 # ---------------------------------------------------------
-# 5. Traitement, Génération & Bouton de Copie
+# 5. Traitement avec la version 'gemini-3.6-flash'
 # ---------------------------------------------------------
 if submit_button and crypto_input:
     with st.spinner(f"Analyse simplifiée de **{crypto_input}** en cours..."):
-        try:
-            target_model = get_available_model()
-            
-            model = genai.GenerativeModel(
-                model_name=target_model,
-                system_instruction=SYSTEM_INSTRUCTION
-            )
-            
-            prompt_utilisateur = f"Effectue une analyse simple, pédagogique et complète de l'actif crypto : {crypto_input}"
-            response = model.generate_content(prompt_utilisateur)
-            
+        # Liste avec le modèle gemini-3.6-flash exigé par l'API
+        candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
+        
+        response_text = None
+        last_error = None
+
+        for model_name in candidate_models:
+            try:
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    system_instruction=SYSTEM_INSTRUCTION
+                )
+                prompt_utilisateur = f"Effectue une analyse simple, pédagogique et complète de l'actif crypto : {crypto_input}"
+                response = model.generate_content(prompt_utilisateur)
+                response_text = response.text
+                break
+            except Exception as e:
+                last_error = e
+                continue
+
+        if response_text:
             st.markdown("---")
-            st.markdown(response.text)
+            st.markdown(response_text)
             
             st.markdown("---")
             st.subheader("📋 Copier le résultat")
             st.caption("Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :")
-            st.code(response.text, language="markdown")
-            
-        except Exception as e:
-            st.error(f"Erreur lors de la génération : {e}")
+            st.code(response_text, language="markdown")
+        else:
+            st.error(f"Erreur lors de la génération : {last_error}")
