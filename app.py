@@ -3,85 +3,141 @@ import google.generativeai as genai
 import requests
 
 # ---------------------------------------------------------
-# 1. Configuration de la page Streamlit & Style Montserrat
+# 1. Configuration Responsive & Design Sombre
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Crypto Analyst AI — Rapport Institutionnel & CoinGecko",
+    page_title="Crypto Analyst AI",
     page_icon="⚡",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Style sombre avec police Montserrat
+# Injection CSS personnalisée (Responsive + Charte Graphique)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
 
+    /* Reset & Base Fonts */
     html, body, [class*="css"], .stMarkdown {
         font-family: 'Montserrat', sans-serif !important;
+        background-color: #000000 !important;
+        color: #FFFFFF !important;
     }
 
-    .main { 
-        background-color: #0d0e12; 
-        color: #e2e8f0; 
+    .stApp {
+        background-color: #000000;
     }
-    
+
+    /* Titres Jaune / Néon Cyan : rgb(3, 239, 252) */
     h1 { 
-        color: #ffd700; 
+        color: rgb(3, 239, 252) !important; 
         text-align: center; 
-        font-family: 'Montserrat', sans-serif !important;
         font-weight: 900 !important; 
         text-transform: uppercase;
+        font-size: clamp(1.8rem, 4vw, 2.8rem) !important;
+        letter-spacing: 1px;
+        margin-bottom: 0.5rem !important;
     }
 
-    h2, h3, h4 {
-        color: #ffd700 !important;
-        font-family: 'Montserrat', sans-serif !important;
+    h2, h3, h4, h5, h6 {
+        color: rgb(3, 239, 252) !important;
         font-weight: 700 !important;
+        margin-top: 1.2rem !important;
+        margin-bottom: 0.6rem !important;
     }
 
+    /* Paragraphs & Lists en blanc */
+    p, li, span, div {
+        color: #FFFFFF !important;
+        font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+        line-height: 1.6;
+    }
+
+    /* Cards Responsive */
+    .crypto-card {
+        background: #111111;
+        border: 1px solid rgba(3, 239, 252, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 20px rgba(3, 239, 252, 0.08);
+    }
+
+    /* Champs de saisie Responsive */
+    .stTextInput input {
+        background-color: #111111 !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgb(3, 239, 252) !important;
+        border-radius: 8px !important;
+        padding: 12px 15px !important;
+        font-size: 16px !important;
+    }
+
+    .stTextInput input:focus {
+        border-color: rgb(3, 239, 252) !important;
+        box-shadow: 0 0 10px rgba(3, 239, 252, 0.5) !important;
+    }
+
+    /* Bouton principal Responsive */
     .stButton>button { 
-        background-color: #ffd700; 
-        color: #0d0e12; 
+        background-color: rgb(3, 239, 252) !important; 
+        color: #000000 !important; 
         font-family: 'Montserrat', sans-serif !important;
         font-weight: 900 !important; 
         width: 100%; 
-        border-radius: 6px; 
-        height: 50px;
-        font-size: 16px;
+        border-radius: 8px !important; 
+        height: 52px;
+        font-size: 16px !important;
+        border: none !important;
+        transition: all 0.3s ease !important;
+        cursor: pointer;
     }
+
     .stButton>button:hover { 
-        background-color: #ffe866; 
-        color: #0d0e12; 
+        background-color: #ffffff !important; 
+        color: #000000 !important;
+        box-shadow: 0 0 15px rgba(3, 239, 252, 0.8) !important;
+        transform: translateY(-2px);
     }
+
+    /* Ajustement responsive des blocs de code pour la copie */
+    .stCodeBlock {
+        border: 1px solid #222222 !important;
+        border-radius: 8px !important;
+        background-color: #080808 !important;
+    }
+
+    /* Cache les éléments superflus de Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
-st.title("⚡ Crypto Analyst AI")
-st.caption("Analyses fondamentales rédigées par Gemini avec données de marché en direct fournies par CoinGecko.")
+# Header de l'interface
+st.markdown("<h1>⚡ CRYPTO ANALYST AI</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #888888 !important; margin-bottom: 2rem;'>Rapports d'analyse fondamentale en direct alimentés par CoinGecko & Gemini AI.</p>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. Fonction de récupération des données CoinGecko API
+# 2. API CoinGecko Data Retrieval
 # ---------------------------------------------------------
 def get_coingecko_data(query):
-    """Recherche la crypto sur CoinGecko et retourne ses données en temps réel."""
+    """Recherche la crypto sur CoinGecko et récupère ses métriques."""
     try:
-        # Étape A: Recherche de l'ID CoinGecko correspondant au terme tapé (ex: "bgb" -> "bitget-token")
         search_url = f"https://api.coingecko.com/api/v3/search?query={query}"
         search_res = requests.get(search_url, timeout=10).json()
         
         coins = search_res.get("coins", [])
         if not coins:
-            return None, "Crypto non trouvée sur CoinGecko."
+            return None, "Actif non trouvé sur CoinGecko."
         
-        coin_id = coins[0]["id"]  # Prend le premier résultat le plus pertinent
+        coin_id = coins[0]["id"]
         
-        # Étape B: Récupération des données détaillées
         data_url = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
         coin_data = requests.get(data_url, timeout=10).json()
         
         market = coin_data.get("market_data", {})
         
-        # Extraction des métriques clés
         result = {
             "name": coin_data.get("name"),
             "symbol": coin_data.get("symbol", "").upper(),
@@ -101,17 +157,17 @@ def get_coingecko_data(query):
         }
         return result, None
     except Exception as e:
-        return None, f"Erreur de connexion CoinGecko : {str(e)}"
+        return None, f"Erreur CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# 3. Instruction Système Pédagogique
+# 3. Instruction Système Gemini
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un expert senior en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en fournissant une analyse fondamentale ultra-précise basée sur les données chiffrées en direct fournies et sur tes connaissances d'actualités récentes.
+Tu es un expert senior en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en fournissant une analyse fondamentale ultra-précise.
 
 Règles importantes :
 - Utilise en priorité les métriques chiffrées exactes transmises depuis l'API CoinGecko.
-- N'hésite pas à mentionner les évolutions stratégiques récentes du projet (ex: pour BGB/Bitget, mentionne l'évolution vers un Universal Exchange UEX, l'intégration de la Layer 2 Morph où BGB sert de jeton de gaz, etc.).
+- Mentionne les évolutions stratégiques récentes du projet (ex: pour BGB/Bitget, mentionne l'évolution vers un Universal Exchange UEX, l'intégration de la Layer 2 Morph où BGB sert de jeton de gaz, etc.).
 - Utilise des mots simples. Explique tout terme technique (Tokenomics, Layer 2, Staking, Burn, Market Cap, UEX) avec une analogie simple de la vie courante.
 - Ton pédagogique, bienveillant et structuré avec des puces.
 
@@ -142,43 +198,42 @@ Structure de l'analyse :
 """
 
 # ---------------------------------------------------------
-# 4. Initialisation Gemini API
+# 4. Connexion API Gemini
 # ---------------------------------------------------------
 try:
     gemini_api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=gemini_api_key)
 except Exception:
-    st.error("⚠️ Clé API Gemini manquante. Veuillez vérifier votre fichier secrets.toml.")
+    st.error("⚠️ Clé API Gemini manquante dans secrets.toml.")
     st.stop()
 
 # ---------------------------------------------------------
-# 5. Interface Utilisateur
+# 5. Interface Utilisateur Responsive (Grid)
 # ---------------------------------------------------------
-col1, col2 = st.columns([3, 1])
+with st.container():
+    col1, col2 = st.columns([3, 1], gap="medium")
 
-with col1:
-    crypto_input = st.text_input(
-        "Actif à analyser :", 
-        placeholder="ex: BGB, Solana, ONDO, SUI, Bitcoin..."
-    )
+    with col1:
+        crypto_input = st.text_input(
+            "Actif crypto à analyser :", 
+            placeholder="Saisissez un nom ou ticker (ex: BGB, Solana, ONDO, SUI, Bitcoin...)",
+            label_visibility="visible"
+        )
 
-with col2:
-    st.write(" ")
-    st.write(" ")
-    submit_button = st.button("🚀 Lancer l'Analyse")
+    with col2:
+        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+        submit_button = st.button("🚀 LANCER L'ANALYSE")
 
 # ---------------------------------------------------------
-# 6. Exécution : CoinGecko + Gemini
+# 6. Traitement & Affichage du Rapport
 # ---------------------------------------------------------
 if submit_button and crypto_input:
-    with st.spinner(f"1/2 : Récupération des métriques CoinGecko pour **{crypto_input}**..."):
+    with st.spinner(f"Récupération des métriques et analyse en cours pour **{crypto_input}**..."):
         cg_data, error = get_coingecko_data(crypto_input)
-    
-    with st.spinner(f"2/2 : Génération de l'analyse fondamentale par Gemini..."):
-        # Formulation du prompt avec injection des données CoinGecko
+        
         if cg_data:
             data_context = f"""
-Voici les données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({cg_data['symbol']}) :
+Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({cg_data['symbol']}) :
 - Prix actuel USD: ${cg_data['current_price_usd']}
 - Rang Market Cap: #{cg_data['rank']}
 - Capitalisation Boursière: ${cg_data['market_cap_usd']:,} USD
@@ -192,7 +247,7 @@ Voici les données de marché officielles en direct de CoinGecko pour {cg_data['
 - Max Supply: {cg_data['max_supply']}
 """
         else:
-            data_context = f"Impossible de récupérer l'API CoinGecko ({error}). Effectue l'analyse avec tes données sur l'actif : {crypto_input}"
+            data_context = f"Indication : CoinGecko indisponible ({error}). Effectue l'analyse avec tes données sur : {crypto_input}"
 
         prompt_final = f"{data_context}\n\nEffectue l'analyse complète et pédagogique de l'actif crypto : {crypto_input}"
 
@@ -214,11 +269,13 @@ Voici les données de marché officielles en direct de CoinGecko pour {cg_data['
                 continue
 
         if response_text:
-            st.markdown("---")
-            st.markdown(response_text)
+            st.markdown("<hr style='border-color: rgba(3, 239, 252, 0.3); margin: 2rem 0;'>", unsafe_allow_html=True)
             
-            st.markdown("---")
-            st.subheader("📋 Copier le résultat")
+            # Affichage dans un conteneur stylisé
+            st.markdown(f"<div class='crypto-card'>{response_text}</div>", unsafe_allow_html=True)
+            
+            # Bloc de copie
+            st.markdown("### 📋 Copier le rapport")
             st.caption("Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :")
             st.code(response_text, language="markdown")
         else:
