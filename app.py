@@ -11,16 +11,15 @@ st.set_page_config(
     layout="wide"
 )
 
-# Correction stricte des contrastes CSS (Fond sombre forcé + textes ultra lisibles)
+# Correction CSS pour les prix et les notes pédagogiques
 st.markdown("""
     <style>
-    /* Forcer le fond sombre pour éviter les conflits avec le Light Mode du navigateur */
+    /* Forcer le fond sombre général */
     stApp, .main, [data-testid="stAppViewContainer"] {
         background-color: #0d0e12 !important;
         color: #ffffff !important;
     }
     
-    /* Conteneur principal centré */
     .block-container {
         max-width: 850px !important;
         padding-top: 2.5rem !important;
@@ -28,7 +27,7 @@ st.markdown("""
         margin: 0 auto !important;
     }
 
-    /* Titre Principal */
+    /* Titres */
     h1 { 
         color: #ffd700 !important; 
         text-align: center; 
@@ -36,17 +35,40 @@ st.markdown("""
         margin-bottom: 0.5rem !important;
     }
 
-    /* Message d'accueil (Blanc brillant contrasté) */
     .welcome-msg {
         text-align: center;
         color: #ffffff !important;
         font-size: 1.15rem;
         font-weight: 600;
         margin-bottom: 2rem;
-        line-height: 1.5;
     }
 
-    /* Question au-dessus du champ (Jaune néon bien visible) */
+    /* FIX 1 : Affichage des prix en badge jaune texte noir */
+    code {
+        background-color: #ffd700 !important;
+        color: #0d0e12 !important;
+        font-weight: bold !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        font-size: 0.95em !important;
+    }
+
+    /* FIX 2 : Notes pédagogiques (Citations / Blockquotes) en Jaune */
+    blockquote {
+        border-left: 3px solid #ffd700 !important;
+        background-color: #161b22 !important;
+        color: #ffd700 !important;
+        padding: 8px 15px !important;
+        margin: 10px 0 !important;
+        border-radius: 0 8px 8px 0 !important;
+    }
+
+    blockquote p, blockquote em, blockquote i, blockquote span {
+        color: #ffd700 !important;
+        font-weight: 500 !important;
+    }
+
+    /* Champ de saisie & Bouton */
     .stTextInput > label {
         display: block;
         text-align: center;
@@ -55,23 +77,15 @@ st.markdown("""
         font-size: 1.1rem !important;
     }
 
-    /* Champ de saisie (Fond sombre avec texte et placeholder blancs) */
     .stTextInput input {
         text-align: center !important;
         background-color: #1e222d !important;
         color: #ffffff !important;
         border: 1px solid #ffd700 !important;
         border-radius: 8px !important;
-        font-size: 16px !important;
         padding: 12px !important;
     }
 
-    .stTextInput input::placeholder {
-        color: #cbd5e1 !important;
-        opacity: 0.9 !important;
-    }
-
-    /* Bouton Jaune avec Texte Noir */
     .stButton>button { 
         background-color: #ffd700 !important; 
         color: #0d0e12 !important; 
@@ -79,24 +93,12 @@ st.markdown("""
         width: 100% !important; 
         border-radius: 8px !important; 
         height: 50px !important;
-        font-size: 16px !important;
         border: none !important;
-        transition: all 0.3s ease !important;
-    }
-
-    .stButton>button p, .stButton>button div, .stButton>button span {
-        color: #0d0e12 !important;
-        font-weight: bold !important;
-    }
-
-    .stButton>button:hover { 
-        background-color: #ffe866 !important; 
-        box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# En-tête & Message d'accueil
+# En-tête
 st.markdown("<h1>⚡ Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
@@ -144,40 +146,34 @@ def get_coingecko_data(query):
 # 3. Instruction Système Gemini
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un analyste financier senior passionné par la crypto, mais tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel, comme un pote expert qui explique un projet autour d'un café). 
+Tu es un analyste financier senior passionné par la crypto. Tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel).
 
-Ton style est **ultra-pédagogique et informatif** : tu dois expliquer le fond du sujet avec la précision d'un analyste institutionnel, mais en utilisant des mots simples, des analogies de la vie courante et une touche d'humour bienveillante.
-
-Règles impératives :
-- Utilise le tutoiement ("tu", "ton", "tes").
-- Intègre impérativement les métriques chiffrées exactes transmises par CoinGecko.
-- Sois à jour sur l'écosystème récent (ex: si tu analyses BGB/Bitget, parle de l'évolution vers un Universal Exchange UEX, l'intégration du Layer 2 Morph où BGB sert de jeton de gaz, etc.).
-- Explique immédiatement chaque notion complexe (Market Cap, Tokenomics, Layer 2, Staking, Burn, Vesting).
+Directives de formatage impératives :
+- Entoure TOUJOURS les prix et montants importants de backticks pour former un badge distinct (ex: `$0.60`).
+- Place TOUTES les explications pédagogiques / "Minute Pédago" sous forme de citation avec un chevron `>` pour qu'elles s'affichent en jaune.
 
 Structure de ton rapport :
 
 1. 📌 C'EST QUOI CE PROJET CONCRÈTEMENT ?
-- Présentation simple, directe et chaleureuse du projet.
-- Catégorie & évolutions récentes majeures (ex: CEX vers UEX, intégration Layer 2, etc.).
-- Ton petit verdict à chaud : PÉPITE / PROJET SOLIDE / ATTENTION DANGER ?
+- Présentation simple et chaleureuse du projet.
+- Catégorie & évolutions récentes (ex: CEX vers UEX, intégration Layer 2 Morph, etc.).
+- Verdict à chaud : PÉPITE / PROJET SOLIDE / ATTENTION DANGER ?
 
 2. 📊 LES CHIFFRES EN DIRECT (GARDONS UN ŒIL SUR LE COUNTER)
-- Présente le prix, le classement, la Market Cap et les mouvements récents (24h/7j).
-- Un mot sur l'ATH/ATL et l'état des stocks de jetons (Supply circulante vs Max Supply, burn).
+- Présente le prix actuel (`$0.60`), le classement, la Market Cap et les variations 24h/7j.
+> 🎓 Minute Pédago - Explique ici simplement une notion comme le Market Cap ou les Tokenomics.
 
-3. 🚀 LES GROS MOTEURS DE HAUSSE (POURQUOI ÇA PEUT IMPLOSER EN HAUSSE ?)
-- À quoi sert vraiment le jeton dans la vie de tous les jours (frais de gaz, réductions, staking) ?
-- Les vrais catalyseurs et actualités du moment.
+3. 🚀 LES GROS MOTEURS DE HAUSSE
+- Utilité réelle du jeton (gaz, staking, réductions) et catalyseurs récents.
 
 4. ⚠️ LES PIÈGES ET RISQUES À NE PAS IGNORER
-- Ce qui pourrait mal tourner (concurrence, régulation, jetons bloqués/vesting, centralisation).
+- Facteurs de risque (concurrence, déblocage de jetons, régulation).
 
 5. ⚔️ COMPARATIF AVEC LA CONCURRENCE
-- Petit comparatif rapide et pertinent avec 2-3 concurrents du secteur.
+- Petit comparatif rapide avec 2-3 concurrents.
 
 6. 🎯 MON VERDICT & MON CONSEIL DE POTE
-- Ta note globale sur 10.
-- Ton conseil tactique et prudent pour un débutant, avec 2-3 indicateurs clés à surveiller régulièrement.
+- Note globale sur 10 et conseil prudent.
 """
 
 # ---------------------------------------------------------
@@ -202,31 +198,30 @@ st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 submit_button = st.button("🚀 LANCER L'ANALYSE D'EXPERT")
 
 # ---------------------------------------------------------
-# 6. Traitement & Génération du Rapport
+# 6. Traitement & Génération
 # ---------------------------------------------------------
 if submit_button and crypto_input:
-    with st.spinner(f"Attends deux secondes, je récupère les données fraîches de **{crypto_input}** et je te prépare ça..."):
+    with st.spinner(f"Récupération des données en direct pour **{crypto_input}**..."):
         cg_data, error = get_coingecko_data(crypto_input)
         
         if cg_data:
             data_context = f"""
-Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({cg_data['symbol']}) :
-- Prix actuel USD: ${cg_data['current_price_usd']}
+Données de marché officielles CoinGecko pour {cg_data['name']} ({cg_data['symbol']}) :
+- Prix actuel USD: `${cg_data['current_price_usd']}`
 - Rang Market Cap: #{cg_data['rank']}
-- Capitalisation Boursière: ${cg_data['market_cap_usd']:,} USD
-- Volume 24h: ${cg_data['total_volume_24h']:,} USD
+- Capitalisation Boursière: `${cg_data['market_cap_usd']:,}` USD
+- Volume 24h: `${cg_data['total_volume_24h']:,}` USD
 - Variation 24h: {cg_data['price_change_24h_pct']}%
-- Variation 7 jours: {cg_data['price_change_7d_pct']}%
-- Plus haut historique (ATH): ${cg_data['ath_usd']} (Date: {cg_data['ath_date']})
-- Plus bas historique (ATL): ${cg_data['atl_usd']} (Date: {cg_data['atl_date']})
-- Offre en circulation: {cg_data['circulating_supply']}
+- Variation 7j: {cg_data['price_change_7d_pct']}%
+- ATH: `${cg_data['ath_usd']}` ({cg_data['ath_date']})
+- ATL: `${cg_data['atl_usd']}` ({cg_data['atl_date']})
+- Circulating Supply: {cg_data['circulating_supply']}
 - Total Supply: {cg_data['total_supply']}
-- Max Supply: {cg_data['max_supply']}
 """
         else:
-            data_context = f"Indication : CoinGecko indisponible ({error}). Effectue l'analyse avec tes données sur : {crypto_input}"
+            data_context = f"Indication : CoinGecko indisponible ({error}). Effectue l'analyse sur : {crypto_input}"
 
-        prompt_final = f"{data_context}\n\nEffectue l'analyse complète, chaleureuse et pédagogique de la crypto : {crypto_input}"
+        prompt_final = f"{data_context}\n\nEffectue l'analyse complète de la crypto : {crypto_input}"
 
         candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
         response_text = None
@@ -251,7 +246,6 @@ Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({
             
             st.markdown("---")
             st.markdown("### 📋 Copier le rapport")
-            st.caption("Passe ta souris sur le bloc ci-dessous et clique sur le bouton de copie en haut à droite :")
             st.code(response_text, language="markdown")
         else:
-            st.error(f"Oups ! Une erreur est survenue lors de la génération : {last_error}")
+            st.error(f"Erreur lors de la génération : {last_error}")
