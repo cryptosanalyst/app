@@ -7,7 +7,7 @@ import requests
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cryptos Analyst IA",
-    page_icon="⚡",
+    page_icon="🧑🏾‍🦱",
     layout="wide"
 )
 
@@ -100,7 +100,7 @@ st.markdown("""
 
 # En-tête
 st.markdown("<h1>⚡ Cryptos Analyst IA</h1>", unsafe_allow_html=True)
-st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
+st.markdown("<div class='welcome-msg'>Bienvenu(e) je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # 2. Récupération des Données CoinGecko
