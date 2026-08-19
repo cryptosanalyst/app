@@ -59,7 +59,7 @@ st.title("⚡ Crypto Analyst AI")
 st.caption("Entrez le nom d'un actif crypto pour obtenir un rapport clair, compréhensible et facile à lire.")
 
 # ---------------------------------------------------------
-# 2. Le Prompt Maître (Rédigé pour être accessible aux novices)
+# 2. Le Prompt Maître (Pédagogique pour débutants)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Tu es un expert en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en restant rigoureux et précis.
@@ -97,7 +97,7 @@ Structure de l'analyse à suivre rigoureusement :
 """
 
 # ---------------------------------------------------------
-# 3. Initialisation de l'API Gemini
+# 3. Initialisation de l'API Gemini & Détection Automatique
 # ---------------------------------------------------------
 try:
     gemini_api_key = st.secrets["GEMINI_API_KEY"]
@@ -105,6 +105,26 @@ try:
 except Exception:
     st.error("⚠️ Clé API Gemini manquante. Veuillez vérifier votre fichier secrets.toml.")
     st.stop()
+
+def get_available_model():
+    """Récupère automatiquement la liste des modèles actifs sur la clé API."""
+    try:
+        models = [
+            m.name for m in genai.list_models() 
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        # Priorité aux modèles Flash puis Pro
+        for m in models:
+            if 'flash' in m:
+                return m
+        for m in models:
+            if 'pro' in m:
+                return m
+        if models:
+            return models[0]
+    except Exception:
+        pass
+    return "gemini-1.5-flash-latest"
 
 # ---------------------------------------------------------
 # 4. Interface Utilisateur
@@ -127,34 +147,24 @@ with col2:
 # ---------------------------------------------------------
 if submit_button and crypto_input:
     with st.spinner(f"Analyse simplifiée de **{crypto_input}** en cours..."):
-        candidate_models = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro"]
-        
-        response_text = None
-        last_error = None
-
-        for model_name in candidate_models:
-            try:
-                model = genai.GenerativeModel(
-                    model_name=model_name,
-                    system_instruction=SYSTEM_INSTRUCTION
-                )
-                prompt_utilisateur = f"Effectue une analyse simple, pédagogique et complète de l'actif crypto : {crypto_input}"
-                response = model.generate_content(prompt_utilisateur)
-                response_text = response.text
-                break
-            except Exception as e:
-                last_error = e
-                continue
-
-        if response_text:
+        try:
+            target_model = get_available_model()
+            
+            model = genai.GenerativeModel(
+                model_name=target_model,
+                system_instruction=SYSTEM_INSTRUCTION
+            )
+            
+            prompt_utilisateur = f"Effectue une analyse simple, pédagogique et complète de l'actif crypto : {crypto_input}"
+            response = model.generate_content(prompt_utilisateur)
+            
             st.markdown("---")
-            # Affichage en texte formaté dans la page
-            st.markdown(response_text)
+            st.markdown(response.text)
             
             st.markdown("---")
             st.subheader("📋 Copier le résultat")
             st.caption("Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :")
-            # Bloc de code permettant la copie rapide en un clic
-            st.code(response_text, language="markdown")
-        else:
-            st.error(f"Erreur lors de la génération : {last_error}")
+            st.code(response.text, language="markdown")
+            
+        except Exception as e:
+            st.error(f"Erreur lors de la génération : {e}")
