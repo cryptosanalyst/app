@@ -2,78 +2,98 @@ import streamlit as st
 import google.generativeai as genai
 
 # ---------------------------------------------------------
-# 1. Configuration de la page Streamlit
+# 1. Configuration de la page Streamlit & Style Montserrat
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Crypto Analyst AI — Rapport Institutionnel",
+    page_title="Crypto Analyst AI — Rapport Pédagogique",
     page_icon="⚡",
     layout="wide"
 )
 
-# Style sombre personnalisé
+# Chargement de la police Montserrat et application du style
 st.markdown("""
     <style>
-    .main { background-color: #0d0e12; color: #e2e8f0; }
-    h1 { color: #ffd700; text-align: center; font-weight: bold; }
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
+
+    html, body, [class*="css"], .stMarkdown {
+        font-family: 'Montserrat', sans-serif !important;
+    }
+
+    .main { 
+        background-color: #0d0e12; 
+        color: #e2e8f0; 
+    }
+    
+    h1 { 
+        color: #ffd700; 
+        text-align: center; 
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 900 !important; 
+        text-transform: uppercase;
+    }
+
+    h2, h3, h4 {
+        color: #ffd700 !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 700 !important;
+    }
+
     .stButton>button { 
         background-color: #ffd700; 
         color: #0d0e12; 
-        font-weight: bold; 
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 900 !important; 
         width: 100%; 
         border-radius: 6px; 
         height: 50px;
         font-size: 16px;
     }
-    .stButton>button:hover { background-color: #ffe866; color: #0d0e12; }
+    .stButton>button:hover { 
+        background-color: #ffe866; 
+        color: #0d0e12; 
+    }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("⚡ Crypto Analyst AI")
-st.caption("Entrez le nom d'un actif crypto pour obtenir une analyse fondamentale complète.")
+st.caption("Entrez le nom d'un actif crypto pour obtenir un rapport clair, compréhensible et facile à lire.")
 
 # ---------------------------------------------------------
-# 2. Le Prompt Maître (Instructions Système)
+# 2. Le Prompt Maître (Rédigé pour être accessible aux novices)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un expert senior en analyse financière et stratégies d'investissement dans le secteur des actifs numériques (Cryptomonnaies, Web3, DeFi & Infrastructure).
+Tu es un expert en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en restant rigoureux et précis.
 
-Lorsqu'un utilisateur te fournit le nom d'un actif crypto, tu dois effectuer une évaluation financière, fondamentale et stratégique ultra-détaillée.
+Règles de rédaction :
+- Utilise des mots simples. Si tu emploies un terme technique (ex: Tokenomics, Layer 2, Staking, Burn, Market Cap), explique-le immédiatement avec une analogie simple de la vie courante.
+- Structure le contenu clairement avec du gras et des puces.
+- Adopte un ton pédagogique, bienveillant et direct.
 
-Applique rigoureusement la structure suivante :
+Structure de l'analyse à suivre rigoureusement :
 
-1. SYNTHÈSE EXÉCUTIVE & AVIS D'EXPERT
-- Positionnement, catégorie de l'actif, profil risque/rendement et horizon d'évaluation.
-- Thèse principale en 2-3 piliers majeurs.
-- Verdict d'Expert (Positif / Neutre / Prudent).
+1. 📌 C'EST QUOI CE PROJET ? (RÉSUMÉ SIMPLE)
+- Explique ce que fait le projet comme si tu l'expliquais à un ami qui n'y connaît rien.
+- Quelle est sa catégorie (ex: monnaie, banque décentralisée, réseau rapide, etc.) ?
+- Ton verdict rapide : Intéressant, Moyen ou Risqué ?
 
-2. FICHE TECHNIQUE & MÉTRIQUES CLÉS
-- Prix actuel & Market Cap
-- ATH (All-Time High) & ATL (All-Time Low) avec dates
-- Lancement & Premier Listing
-- Tokenomics (Supply circulante, Max supply, émission, mécanismes déflationnistes/burn).
+2. 📊 LES CHIFFRES CLÉS (EXPLIQUÉS SIMPLEMENT)
+- Prix actuel & Valeur totale du projet (Market Cap).
+- Plus haut prix historique (ATH) et plus bas (ATL).
+- La quantité de jetons disponibles (expliquer s'il y en aura d'autres créés ou si l'offre diminue).
 
-3. THÈSE D'INVESTISSEMENT & MOTEURS D'ASYMÉTRIE
-- Marché Adressable (TAM) & Écosystème
-- Mécanisme d'Accumulation de Valeur (Gas, Staking, Real Yield, Burn)
-- Synergies & Effets de Réseau
+3. 🚀 POURQUOI CE PROJET PEUT PRENDRE DE LA VALEUR ?
+- Quel problème réel essaie-t-il de résoudre ?
+- Comment le jeton gagne-t-il de la valeur quand le projet est utilisé ?
 
-4. ANALYSE CRITIQUE DES RISQUES & LIMITES
-- Risque de Tokenomics / Vesting / Unlocks
-- Concurrence & Moat
-- Risque Réglementaire & Dépendance Corporate
+4. ⚠️ LES RISQUES À CONNAÎTRE (AVANT D'INVESTIR)
+- Quels sont les pièges ou les dangers (concurrence, régulation, jetons bloqués) ?
 
-5. ANATOMIE COMPARATIVE DU SECTEUR
-Intègre un tableau comparatif opposant l'actif étudié à 3 ou 4 de ses concurrents directs.
+5. ⚔️ COMPARISON AVEC LES CONCURRENTS
+- Un petit tableau ou comparatif simple avec 2 à 3 projets connus du même domaine.
 
-6. SCÉNARIOS D'ÉVOLUTION (Horizon 12 - 24 mois)
-- Bull Case / Base Case / Bear Case
-
-7. GRILLE D'ÉVALUATION FINALE & RECOMMANDATION TACTIQUE
-- Grille de Notation sur 10 (5 critères)
-- Score Global / 10
-- Recommandation Tactique & 2-3 métriques clés à surveiller chaque trimestre.
-
-Directives : Ton financier, direct, professionnel. Utilise le Markdown pour la lisibilité.
+6. 🎯 VERDICT ET CONSEIL SIMPLE
+- Une note sur 10 basée sur la solidité du projet.
+- Une recommandation prudente pour un débutant.
 """
 
 # ---------------------------------------------------------
@@ -94,7 +114,7 @@ col1, col2 = st.columns([3, 1])
 with col1:
     crypto_input = st.text_input(
         "Actif à analyser :", 
-        placeholder="ex: BGB, Solana, ONDO, SUI, Bittensor..."
+        placeholder="ex: BGB, Solana, ONDO, SUI, Bitcoin..."
     )
 
 with col2:
@@ -103,12 +123,11 @@ with col2:
     submit_button = st.button("🚀 Lancer l'Analyse")
 
 # ---------------------------------------------------------
-# 5. Traitement & Génération du Rapport
+# 5. Traitement, Génération & Bouton de Copie
 # ---------------------------------------------------------
 if submit_button and crypto_input:
-    with st.spinner(f"Génération du rapport d'analyse pour **{crypto_input}**..."):
-        # Modèles cibles par ordre de compatibilité recommandée par Google
-        candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+    with st.spinner(f"Analyse simplifiée de **{crypto_input}** en cours..."):
+        candidate_models = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro"]
         
         response_text = None
         last_error = None
@@ -119,16 +138,23 @@ if submit_button and crypto_input:
                     model_name=model_name,
                     system_instruction=SYSTEM_INSTRUCTION
                 )
-                prompt_utilisateur = f"Effectue l'analyse fondamentale complète et à jour de l'actif crypto : {crypto_input}"
+                prompt_utilisateur = f"Effectue une analyse simple, pédagogique et complète de l'actif crypto : {crypto_input}"
                 response = model.generate_content(prompt_utilisateur)
                 response_text = response.text
-                break  # Si la génération réussit, on sort de la boucle
+                break
             except Exception as e:
                 last_error = e
                 continue
 
         if response_text:
             st.markdown("---")
+            # Affichage en texte formaté dans la page
             st.markdown(response_text)
+            
+            st.markdown("---")
+            st.subheader("📋 Copier le résultat")
+            st.caption("Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :")
+            # Bloc de code permettant la copie rapide en un clic
+            st.code(response_text, language="markdown")
         else:
             st.error(f"Erreur lors de la génération : {last_error}")
