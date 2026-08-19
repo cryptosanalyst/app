@@ -11,10 +11,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# Style CSS pour une lisibilité maximale sur l'interface par défaut
+# Correction stricte des contrastes CSS (Fond sombre forcé + textes ultra lisibles)
 st.markdown("""
     <style>
-    .main { background-color: #0d0e12; color: #f0f6fc; }
+    /* Forcer le fond sombre pour éviter les conflits avec le Light Mode du navigateur */
+    stApp, .main, [data-testid="stAppViewContainer"] {
+        background-color: #0d0e12 !important;
+        color: #ffffff !important;
+    }
     
     /* Conteneur principal centré */
     .block-container {
@@ -24,57 +28,70 @@ st.markdown("""
         margin: 0 auto !important;
     }
 
+    /* Titre Principal */
     h1 { 
-        color: #ffd700; 
+        color: #ffd700 !important; 
         text-align: center; 
-        font-weight: bold;
+        font-weight: 800 !important;
         margin-bottom: 0.5rem !important;
     }
 
+    /* Message d'accueil (Blanc brillant contrasté) */
     .welcome-msg {
         text-align: center;
-        color: #e2e8f0;
+        color: #ffffff !important;
         font-size: 1.15rem;
-        font-weight: 500;
+        font-weight: 600;
         margin-bottom: 2rem;
         line-height: 1.5;
     }
 
-    /* Champ de saisie */
+    /* Question au-dessus du champ (Jaune néon bien visible) */
     .stTextInput > label {
         display: block;
         text-align: center;
-        font-weight: bold;
-        color: #ffd700;
-        font-size: 1.05rem;
+        font-weight: 700 !important;
+        color: #ffd700 !important;
+        font-size: 1.1rem !important;
     }
 
-    .stTextInput > div > div > input {
-        text-align: center;
-        background-color: #161b22;
-        color: #ffffff;
-        border: 1px solid #30363d;
-        border-radius: 8px;
-        font-size: 16px;
+    /* Champ de saisie (Fond sombre avec texte et placeholder blancs) */
+    .stTextInput input {
+        text-align: center !important;
+        background-color: #1e222d !important;
+        color: #ffffff !important;
+        border: 1px solid #ffd700 !important;
+        border-radius: 8px !important;
+        font-size: 16px !important;
+        padding: 12px !important;
     }
 
-    /* Bouton d'action */
+    .stTextInput input::placeholder {
+        color: #cbd5e1 !important;
+        opacity: 0.9 !important;
+    }
+
+    /* Bouton Jaune avec Texte Noir */
     .stButton>button { 
-        background-color: #ffd700; 
-        color: #0d0e12; 
-        font-weight: bold; 
-        width: 100%; 
-        border-radius: 8px; 
-        height: 50px;
-        font-size: 16px;
-        border: none;
-        transition: all 0.3s ease;
+        background-color: #ffd700 !important; 
+        color: #0d0e12 !important; 
+        font-weight: bold !important; 
+        width: 100% !important; 
+        border-radius: 8px !important; 
+        height: 50px !important;
+        font-size: 16px !important;
+        border: none !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .stButton>button p, .stButton>button div, .stButton>button span {
+        color: #0d0e12 !important;
+        font-weight: bold !important;
     }
 
     .stButton>button:hover { 
-        background-color: #ffe866; 
-        color: #0d0e12;
-        box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        background-color: #ffe866 !important; 
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -124,7 +141,7 @@ def get_coingecko_data(query):
         return None, f"Erreur CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# 3. Instruction Système Gemini (Ton Familier, Chaleureux & Expert)
+# 3. Instruction Système Gemini
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Tu es un analyste financier senior passionné par la crypto, mais tu exprimes tes analyses avec un **ton familier, chaleureux, accessible et très enthousiaste** (tutoiement naturel, comme un pote expert qui explique un projet autour d'un café). 
@@ -230,8 +247,6 @@ Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({
 
         if response_text:
             st.markdown("<hr style='border-color: #30363d; margin: 2rem 0;'>", unsafe_allow_html=True)
-            
-            # Affichage du rapport
             st.markdown(response_text)
             
             st.markdown("---")
