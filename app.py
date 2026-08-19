@@ -196,7 +196,7 @@ def get_coingecko_data(query):
         return None, f"Erreur CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# Rotation Clés API avec Modèles Mis à Jour
+# Système de secours Multi-clés + Détection Dynamique des Modèles
 # ---------------------------------------------------------
 def get_gemini_api_keys():
     keys = []
@@ -208,23 +208,43 @@ def get_gemini_api_keys():
 
 def generate_content_with_key_failover(prompt_text, system_instruction):
     gemini_keys = get_gemini_api_keys()
-    candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest"]
-    last_err = "Aucune réponse générée."
+    last_err = "Aucune clé configurée ou valide."
 
     for api_key in gemini_keys:
-        genai.configure(api_key=api_key)
-        for model_name in candidate_models:
+        try:
+            genai.configure(api_key=api_key)
+            
+            # 1. Détection automatique des modèles disponibles sur la clé
+            valid_models = []
             try:
-                model = genai.GenerativeModel(
-                    model_name=model_name,
-                    system_instruction=system_instruction
-                )
-                response = model.generate_content(prompt_text)
-                if response and response.text:
-                    return response.text, None
-            except Exception as e:
-                last_err = str(e)
-                continue
+                for m in genai.list_models():
+                    if 'generateContent' in m.supported_generation_methods:
+                        valid_models.append(m.name)
+            except Exception:
+                pass
+            
+            # Priorisation des modèles Flash récents
+            fallback_models = ["models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-1.5-flash"]
+            candidate_models = valid_models if valid_models else fallback_models
+
+            # 2. Essai de génération avec les modèles détectés
+            for model_name in candidate_models:
+                try:
+                    model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=system_instruction
+                    )
+                    response = model.generate_content(prompt_text)
+                    if response and response.text:
+                        return response.text, None
+                except Exception as m_err:
+                    last_err = str(m_err)
+                    continue
+
+        except Exception as k_err:
+            last_err = str(k_err)
+            continue
+
     return None, last_err
 
 # ---------------------------------------------------------
