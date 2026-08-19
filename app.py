@@ -6,7 +6,7 @@ import requests
 # 1. Configuration & Design Personnalisé
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Crypto Analyst AI",
+    page_title="Cryptos Analyst IA",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -28,13 +28,14 @@ st.markdown("""
         background-color: #000000;
     }
 
-    /* Titre Principal ajusté (Taille modérée) */
+    /* Titre Principal agrandi (300px avec sécurité responsive) */
     h1 { 
         color: rgb(3, 239, 252) !important; 
         text-align: center; 
         font-weight: 900 !important; 
         text-transform: uppercase;
-        font-size: 2rem !important;
+        font-size: min(300px, 15vw) !important;
+        line-height: 1 !important;
         letter-spacing: 1px;
         margin-bottom: 0.3rem !important;
     }
@@ -80,7 +81,7 @@ st.markdown("""
         opacity: 0.7;
     }
 
-    /* Bouton Jaune avec Texte Noir */
+    /* Bouton Jaune avec Texte STRICTEMENT NOIR */
     .stButton>button { 
         background-color: #FFD700 !important; 
         color: #000000 !important; 
@@ -95,10 +96,19 @@ st.markdown("""
         cursor: pointer;
     }
 
+    .stButton>button p, .stButton>button div, .stButton>button span {
+        color: #000000 !important;
+        font-weight: 900 !important;
+    }
+
     .stButton>button:hover { 
         background-color: #FFE866 !important; 
         color: #000000 !important;
         box-shadow: 0 0 12px rgba(255, 215, 0, 0.6) !important;
+    }
+
+    .stButton>button:hover p, .stButton>button:hover div, .stButton>button:hover span {
+        color: #000000 !important;
     }
 
     /* Carte de résultat */
@@ -124,7 +134,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # En-tête
-st.markdown("<h1>⚡ CRYPTO ANALYST AI</h1>", unsafe_allow_html=True)
+st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<p class='yellow-text' style='text-align: center; margin-bottom: 2rem;'>Rapports d'analyse fondamentale en direct alimentés par CoinGecko & Gemini AI.</p>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
