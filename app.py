@@ -7,13 +7,14 @@ import requests
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Cryptos Analyst IA",
-    page_icon="🤖",
+    page_icon="⚡",
     layout="wide"
 )
 
-# Correction CSS pour les prix, les notes et l'avatar
+# Correction CSS pour les prix et les notes pédagogiques
 st.markdown("""
     <style>
+    /* Forcer le fond sombre général */
     stApp, .main, [data-testid="stAppViewContainer"] {
         background-color: #0d0e12 !important;
         color: #ffffff !important;
@@ -21,24 +22,9 @@ st.markdown("""
     
     .block-container {
         max-width: 850px !important;
-        padding-top: 2rem !important;
+        padding-top: 2.5rem !important;
         padding-bottom: 3rem !important;
         margin: 0 auto !important;
-    }
-
-    /* Avatar centré */
-    .avatar-container {
-        text-align: center;
-        margin-bottom: 10px;
-    }
-
-    .avatar-img {
-        width: 130px;
-        height: 130px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #ffd700;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
     }
 
     /* Titres */
@@ -57,7 +43,7 @@ st.markdown("""
         margin-bottom: 2rem;
     }
 
-    /* Badges de Prix (Texte noir sur fond jaune) */
+    /* FIX 1 : Affichage des prix en badge jaune texte noir */
     code {
         background-color: #ffd700 !important;
         color: #0d0e12 !important;
@@ -67,7 +53,7 @@ st.markdown("""
         font-size: 0.95em !important;
     }
 
-    /* Notes pédagogiques en Jaune */
+    /* FIX 2 : Notes pédagogiques (Citations / Blockquotes) en Jaune */
     blockquote {
         border-left: 3px solid #ffd700 !important;
         background-color: #161b22 !important;
@@ -112,14 +98,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# En-tête avec Avatar
-st.markdown("""
-    <div class='avatar-container'>
-        <img src='https://raw.githubusercontent.com/VOTRE_NOM_GITHUB/VOTRE_DEPOT/main/avatar.jpg' class='avatar-img' alt='Avatar'>
-    </div>
-""", unsafe_allow_html=True)
-
-st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
+# En-tête
+st.markdown("<h1>⚡ Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
