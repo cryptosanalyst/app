@@ -99,7 +99,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # En-tête
-st.markdown("<h1>⚡ Cryptos Analyst IA</h1>", unsafe_allow_html=True)
+st.markdown("<h1>🧑🏾‍🦱 Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<div class='welcome-msg'>Bienvenu(e) je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
