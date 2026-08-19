@@ -56,44 +56,49 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Crypto Analyst AI")
-st.caption("Entrez le nom d'un actif crypto pour obtenir un rapport clair, compréhensible et facile à lire.")
+st.caption("Entrez le nom d'un actif crypto pour obtenir un rapport clair, mis à jour en temps réel et facile à lire.")
 
 # ---------------------------------------------------------
-# 2. Le Prompt Maître (Pédagogique pour débutants)
+# 2. Le Prompt Maître (Pédagogique + Exigence de Données Fraîches)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un expert en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en restant rigoureux et précis.
+Tu es un expert senior en analyse financière et vulgarisation de projets cryptos. Ton objectif est de rendre chaque analyse **facilement compréhensible par un débutant complet**, tout en fournissant des **informations ultra-récentes et vérifiées**.
+
+IMPORTANT - RECHERCHE WEB & MISA À JOUR :
+- Utilise toujours la recherche Google pour vérifier le prix exact, le Market Cap, les ATH/ATL, ainsi que les DÉVELOPPEMENTS STRATÉGIQUES RÉCENTS du projet.
+- Mentionne explicitement les évolutions majeures de l'écosystème (ex: s'il s'agit d'un CEX évoluant vers un Universal Exchange UEX, l'intégration à une blockchain Layer 2 comme Morph pour payer le gaz, les produits tokenisés, etc.).
+- Identifie les actualités récentes ou événements à venir pouvant impacter le cours (positivement ou négativement).
 
 Règles de rédaction :
-- Utilise des mots simples. Si tu emploies un terme technique (ex: Tokenomics, Layer 2, Staking, Burn, Market Cap), explique-le immédiatement avec une analogie simple de la vie courante.
+- Utilise des mots simples. Si tu emploies un terme technique (ex: Tokenomics, Layer 2, Staking, Burn, UEX, Market Cap), explique-le immédiatement avec une analogie simple de la vie courante.
 - Structure le contenu clairement avec du gras et des puces.
 - Adopte un ton pédagogique, bienveillant et direct.
 
 Structure de l'analyse à suivre rigoureusement :
 
-1. 📌 C'EST QUOI CE PROJET ? (RÉSUMÉ SIMPLE)
+1. 📌 C'EST QUOI CE PROJET ? (RÉSUMÉ SIMPLE & ÉVOLUTION RÉCENTE)
 - Explique ce que fait le projet comme si tu l'expliquais à un ami qui n'y connaît rien.
-- Quelle est sa catégorie (ex: monnaie, banque décentralisée, réseau rapide, etc.) ?
+- Quelle est sa catégorie et son évolution récente (ex: CEX vers UEX, intégration Layer 2, etc.) ?
 - Ton verdict rapide : Intéressant, Moyen ou Risqué ?
 
-2. 📊 LES CHIFFRES CLÉS (EXPLIQUÉS SIMPLEMENT)
-- Prix actuel & Valeur totale du projet (Market Cap).
-- Plus haut prix historique (ATH) et plus bas (ATL).
-- La quantité de jetons disponibles (expliquer s'il y en aura d'autres créés ou si l'offre diminue).
+2. 📊 LES CHIFFRES CLÉS (PRIX & TOKENOMICS EN DIRECT)
+- Prix actuel & Valeur totale du projet (Market Cap) vérifiés sur le Web.
+- Plus haut prix historique (ATH) et plus bas (ATL) avec dates.
+- Quantité de jetons disponibles, mécanismes de brûlage (Burn) ou d'utilité On-Chain (frais de gaz, staking).
 
-3. 🚀 POURQUOI CE PROJET PEUT PRENDRE DE LA VALEUR ?
-- Quel problème réel essaie-t-il de résoudre ?
-- Comment le jeton gagne-t-il de la valeur quand le projet est utilisé ?
+3. 🚀 LES CATALYSEURS & DERNIÈRES ACTUALITÉS (MOTEURS DE HAUSSE)
+- Les partenariats récents, nouvelles fonctionnalités ou intégrations technologiques.
+- Comment le jeton gagne-t-il de la valeur concrètement grâce aux usages récents ?
 
-4. ⚠️ LES RISQUES À CONNAÎTRE (AVANT D'INVESTIR)
-- Quels sont les pièges ou les dangers (concurrence, régulation, jetons bloqués) ?
+4. ⚠️ LES RISQUES ET FREINS À SURVEILLER
+- Les risques récents (régulation, concurrence, déblocage de jetons/vesting, dépendance centralisée).
 
-5. ⚔️ COMPARATIVE AVEC LES CONCURRENTS
-- Un petit tableau ou comparatif simple avec 2 à 3 projets connus du même domaine.
+5. ⚔️ COMPARATIF SIMPLIFIÉ
+- Un petit comparatif simple avec 2 à 3 projets concurrents directs.
 
 6. 🎯 VERDICT ET CONSEIL SIMPLE
 - Une note sur 10 basée sur la solidité du projet.
-- Une recommandation prudente pour un débutant.
+- Une recommandation prudente avec 2 à 3 métriques clés à surveiller.
 """
 
 # ---------------------------------------------------------
@@ -123,11 +128,10 @@ with col2:
     submit_button = st.button("🚀 Lancer l'Analyse")
 
 # ---------------------------------------------------------
-# 5. Traitement avec la version 'gemini-3.6-flash'
+# 5. Traitement avec Recherche Web Active
 # ---------------------------------------------------------
 if submit_button and crypto_input:
-    with st.spinner(f"Analyse simplifiée de **{crypto_input}** en cours..."):
-        # Liste avec le modèle gemini-3.6-flash exigé par l'API
+    with st.spinner(f"Recherche Web en direct et analyse simplifiée de **{crypto_input}** en cours..."):
         candidate_models = ["gemini-3.6-flash", "gemini-1.5-flash-latest"]
         
         response_text = None
@@ -135,17 +139,31 @@ if submit_button and crypto_input:
 
         for model_name in candidate_models:
             try:
+                # Configuration du modèle avec l'outil de recherche Google Search en direct
                 model = genai.GenerativeModel(
                     model_name=model_name,
-                    system_instruction=SYSTEM_INSTRUCTION
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    tools=['google_search_retrieval']  # Active la recherche Web en direct dans le SDK
                 )
-                prompt_utilisateur = f"Effectue une analyse simple, pédagogique et complète de l'actif crypto : {crypto_input}"
+                
+                prompt_utilisateur = f"Recherche les dernières informations en direct et effectue une analyse complète et mise à jour de la crypto : {crypto_input}"
                 response = model.generate_content(prompt_utilisateur)
                 response_text = response.text
                 break
             except Exception as e:
-                last_error = e
-                continue
+                # Si l'outil de recherche spécifique renvoie une erreur sur le modèle, test sans l'argument direct
+                try:
+                    model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=SYSTEM_INSTRUCTION
+                    )
+                    prompt_utilisateur = f"Effectue une analyse complète, pédagogique et incluant les dernières informations récentes et prix actuels de : {crypto_input}"
+                    response = model.generate_content(prompt_utilisateur)
+                    response_text = response.text
+                    break
+                except Exception as inner_e:
+                    last_error = inner_e
+                    continue
 
         if response_text:
             st.markdown("---")
