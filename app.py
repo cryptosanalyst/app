@@ -3,7 +3,7 @@ import google.generativeai as genai
 import requests
 
 # ---------------------------------------------------------
-# 1. Configuration Responsive & Design Sombre
+# 1. Configuration & Design Personnalisé
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Crypto Analyst AI",
@@ -12,12 +12,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Injection CSS personnalisée (Responsive + Charte Graphique)
+# Injection CSS
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
 
-    /* Reset & Base Fonts */
+    /* Fond noir et police Montserrat */
     html, body, [class*="css"], .stMarkdown {
         font-family: 'Montserrat', sans-serif !important;
         background-color: #000000 !important;
@@ -28,17 +28,18 @@ st.markdown("""
         background-color: #000000;
     }
 
-    /* Titres Jaune / Néon Cyan : rgb(3, 239, 252) */
+    /* Titre Principal ajusté (Taille modérée) */
     h1 { 
         color: rgb(3, 239, 252) !important; 
         text-align: center; 
         font-weight: 900 !important; 
         text-transform: uppercase;
-        font-size: clamp(1.8rem, 4vw, 2.8rem) !important;
+        font-size: 2rem !important;
         letter-spacing: 1px;
-        margin-bottom: 0.5rem !important;
+        margin-bottom: 0.3rem !important;
     }
 
+    /* Sous-titres et titres de sections */
     h2, h3, h4, h5, h6 {
         color: rgb(3, 239, 252) !important;
         font-weight: 700 !important;
@@ -46,47 +47,48 @@ st.markdown("""
         margin-bottom: 0.6rem !important;
     }
 
-    /* Paragraphs & Lists en blanc */
+    /* Texte principal en blanc */
     p, li, span, div {
         color: #FFFFFF !important;
-        font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+        font-size: 1rem;
         line-height: 1.6;
     }
 
-    /* Cards Responsive */
-    .crypto-card {
-        background: #111111;
-        border: 1px solid rgba(3, 239, 252, 0.3);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 20px rgba(3, 239, 252, 0.08);
+    /* Textes d'indications et sous-titres légèrement jaunes */
+    .stCaption, caption, .yellow-text {
+        color: #FFE866 !important;
     }
 
-    /* Champs de saisie Responsive */
+    /* Label au-dessus du champ de texte en jaune léger */
+    .stTextInput label {
+        color: #FFE866 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Champ de saisie et Placeholder (texte par défaut) en jaune léger */
     .stTextInput input {
         background-color: #111111 !important;
         color: #FFFFFF !important;
         border: 1px solid rgb(3, 239, 252) !important;
         border-radius: 8px !important;
         padding: 12px 15px !important;
-        font-size: 16px !important;
+        font-size: 15px !important;
     }
 
-    .stTextInput input:focus {
-        border-color: rgb(3, 239, 252) !important;
-        box-shadow: 0 0 10px rgba(3, 239, 252, 0.5) !important;
+    .stTextInput input::placeholder {
+        color: #FFE866 !important;
+        opacity: 0.7;
     }
 
-    /* Bouton principal Responsive */
+    /* Bouton Jaune avec Texte Noir */
     .stButton>button { 
-        background-color: rgb(3, 239, 252) !important; 
+        background-color: #FFD700 !important; 
         color: #000000 !important; 
         font-family: 'Montserrat', sans-serif !important;
         font-weight: 900 !important; 
         width: 100%; 
         border-radius: 8px !important; 
-        height: 52px;
+        height: 50px;
         font-size: 16px !important;
         border: none !important;
         transition: all 0.3s ease !important;
@@ -94,35 +96,41 @@ st.markdown("""
     }
 
     .stButton>button:hover { 
-        background-color: #ffffff !important; 
+        background-color: #FFE866 !important; 
         color: #000000 !important;
-        box-shadow: 0 0 15px rgba(3, 239, 252, 0.8) !important;
-        transform: translateY(-2px);
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.6) !important;
     }
 
-    /* Ajustement responsive des blocs de code pour la copie */
+    /* Carte de résultat */
+    .crypto-card {
+        background: #111111;
+        border: 1px solid rgba(3, 239, 252, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    /* Bloc de code pour la copie */
     .stCodeBlock {
         border: 1px solid #222222 !important;
         border-radius: 8px !important;
         background-color: #080808 !important;
     }
 
-    /* Cache les éléments superflus de Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
-# Header de l'interface
+# En-tête
 st.markdown("<h1>⚡ CRYPTO ANALYST AI</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #888888 !important; margin-bottom: 2rem;'>Rapports d'analyse fondamentale en direct alimentés par CoinGecko & Gemini AI.</p>", unsafe_allow_html=True)
+st.markdown("<p class='yellow-text' style='text-align: center; margin-bottom: 2rem;'>Rapports d'analyse fondamentale en direct alimentés par CoinGecko & Gemini AI.</p>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. API CoinGecko Data Retrieval
+# 2. Récupération des Données CoinGecko
 # ---------------------------------------------------------
 def get_coingecko_data(query):
-    """Recherche la crypto sur CoinGecko et récupère ses métriques."""
     try:
         search_url = f"https://api.coingecko.com/api/v3/search?query={query}"
         search_res = requests.get(search_url, timeout=10).json()
@@ -208,24 +216,22 @@ except Exception:
     st.stop()
 
 # ---------------------------------------------------------
-# 5. Interface Utilisateur Responsive (Grid)
+# 5. Interface Utilisateur
 # ---------------------------------------------------------
-with st.container():
-    col1, col2 = st.columns([3, 1], gap="medium")
+col1, col2 = st.columns([3, 1], gap="medium")
 
-    with col1:
-        crypto_input = st.text_input(
-            "Actif crypto à analyser :", 
-            placeholder="Saisissez un nom ou ticker (ex: BGB, Solana, ONDO, SUI, Bitcoin...)",
-            label_visibility="visible"
-        )
+with col1:
+    crypto_input = st.text_input(
+        "Actif crypto à analyser :", 
+        placeholder="Saisissez un nom ou ticker (ex: BGB, Solana, ONDO, SUI, Bitcoin...)"
+    )
 
-    with col2:
-        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-        submit_button = st.button("🚀 LANCER L'ANALYSE")
+with col2:
+    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+    submit_button = st.button("🚀 LANCER L'ANALYSE")
 
 # ---------------------------------------------------------
-# 6. Traitement & Affichage du Rapport
+# 6. Traitement & Génération du Rapport
 # ---------------------------------------------------------
 if submit_button and crypto_input:
     with st.spinner(f"Récupération des métriques et analyse en cours pour **{crypto_input}**..."):
@@ -271,12 +277,10 @@ Données de marché officielles en direct de CoinGecko pour {cg_data['name']} ({
         if response_text:
             st.markdown("<hr style='border-color: rgba(3, 239, 252, 0.3); margin: 2rem 0;'>", unsafe_allow_html=True)
             
-            # Affichage dans un conteneur stylisé
             st.markdown(f"<div class='crypto-card'>{response_text}</div>", unsafe_allow_html=True)
             
-            # Bloc de copie
             st.markdown("### 📋 Copier le rapport")
-            st.caption("Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :")
+            st.markdown("<p class='yellow-text'>Survolez le bloc ci-dessous et cliquez sur l'icône de copie en haut à droite :</p>", unsafe_allow_html=True)
             st.code(response_text, language="markdown")
         else:
             st.error(f"Erreur lors de la génération : {last_error}")
