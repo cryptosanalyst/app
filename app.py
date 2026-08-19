@@ -137,7 +137,7 @@ if avatar_filename:
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
-st.markdown("<div class='welcome-msg'>Bienvenu(e) je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
+st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
 TODAY = str(date.today())
 if "daily_request_count" not in st.session_state: st.session_state.daily_request_count = 0
@@ -171,7 +171,7 @@ def get_coingecko_data(query):
         coin_data = requests.get(data_url, timeout=10).json()
         
         market = coin_data.get("market_data", {})
-        platforms = coin_data.get("platforms", {}) # Extraction des réseaux
+        platforms = coin_data.get("platforms", {})
         
         result = {
             "name": coin_data.get("name"),
@@ -189,14 +189,14 @@ def get_coingecko_data(query):
             "circulating_supply": market.get("circulating_supply"),
             "total_supply": market.get("total_supply"),
             "max_supply": market.get("max_supply"),
-            "platforms": platforms # Ajout des plateformes
+            "platforms": platforms
         }
         return result, None
     except Exception as e:
         return None, f"Erreur CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# Rotation Clés API
+# Rotation Clés API avec Modèles Mis à Jour
 # ---------------------------------------------------------
 def get_gemini_api_keys():
     keys = []
@@ -208,26 +208,32 @@ def get_gemini_api_keys():
 
 def generate_content_with_key_failover(prompt_text, system_instruction):
     gemini_keys = get_gemini_api_keys()
+    candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest"]
     last_err = "Aucune réponse générée."
+
     for api_key in gemini_keys:
-        try:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction=system_instruction, tools=['google_search_retrieval'])
-            response = model.generate_content(prompt_text)
-            if response and response.text: return response.text, None
-        except Exception as e:
-            last_err = str(e)
-            continue
+        genai.configure(api_key=api_key)
+        for model_name in candidate_models:
+            try:
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    system_instruction=system_instruction
+                )
+                response = model.generate_content(prompt_text)
+                if response and response.text:
+                    return response.text, None
+            except Exception as e:
+                last_err = str(e)
+                continue
     return None, last_err
 
 # ---------------------------------------------------------
 # Prompt Système
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un analyste financier senior passionné par la crypto. Tu exprimes tes analyses avec un ton familier, chaleureux, accessible et enthousiaste.
+Tu es un analyste financier senior passionné par la crypto. Tu exprimes tes analyses avec un ton familier, chaleureux, accessible et enthousiaste (tutoiement naturel).
 
 CONSIGNE CRITIQUE - EXACTITUDE & RIGOUREUSES VÉRIFICATIONS :
-- Effectue obligatoirement une recherche Web pour VÉRIFIER L'EXACTITUDE des données.
 - Intègre les métriques chiffrées de CoinGecko fournies (Prix, Market Cap, ATH/ATL, Réseaux/Contrats).
 - Fournis les informations de la DERNIÈRE MISE À JOUR DISPONIBLE.
 
@@ -242,7 +248,7 @@ Structure du rapport :
 2. 📊 LES CHIFFRES EN DIRECT
 > 🎓 Minute Pédago - Explique simplement une notion (ex: Market Cap).
 3. 🔗 INFOS TECHNIQUES (RÉSEAUX & CONTRATS)
-- Liste ici clairement tous les réseaux blockchain et les adresses de contrat correspondantes fournies par les données.
+- Liste clairement tous les réseaux blockchain et les adresses de contrat correspondantes fournies.
 4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS
 5. ⚠️ RISQUES À NE PAS IGNORER
 6. ⚔️ COMPARATIF CONCURRENCE
@@ -265,21 +271,25 @@ if submit_button and crypto_input:
         cg_data, error = get_coingecko_data(crypto_input)
         if not cg_data: st.warning(f"😔 Désolé ! Crypto « {crypto_input} » introuvable sur CoinGecko.")
         else:
-            platforms_info = "\n".join([f"- {net.upper()}: {addr}" for net, addr in cg_data['platforms'].items()]) if cg_data['platforms'] else "Réseau natif ou données non disponibles via API."
+            platforms_info = "\n".join([f"- {net.upper()}: `{addr}`" for net, addr in cg_data['platforms'].items() if addr]) if cg_data['platforms'] else "Réseau natif ou données de contrat non applicables."
             data_context = f"""
-Données CoinGecko pour {cg_data['name']} :
-- Prix: `${cg_data['current_price_usd']}`
+Données CoinGecko pour {cg_data['name']} ({cg_data['symbol']}) :
+- Prix actuel: `${cg_data['current_price_usd']}`
 - Market Cap: `${cg_data['market_cap_usd']:,}` USD
 - Rang: #{cg_data['rank']}
 - RÉSEAUX & ADRESSES CONTRAT: 
 {platforms_info}
 """
             prompt_final = f"{data_context}\n\nEffectue l'analyse complète de : {cg_data['name']} ({cg_data['symbol']})"
-            response_text, gen_error = generate_content_with_key_failover(prompt_final, SYSTEM_INSTRUCTION)
+            
+            with st.spinner(f"Rédaction du rapport d'expert pour **{cg_data['name']}**..."):
+                response_text, gen_error = generate_content_with_key_failover(prompt_final, SYSTEM_INSTRUCTION)
 
             if response_text:
                 st.session_state.daily_request_count += 1
                 st.markdown("<hr>", unsafe_allow_html=True)
                 st.markdown(response_text)
+                st.markdown("---")
+                st.markdown("### 📋 Copier le rapport")
                 st.code(response_text, language="markdown")
             else: st.error(f"Désolé, l'agent IA rencontre un souci : {gen_error}")
