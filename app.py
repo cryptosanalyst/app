@@ -2,43 +2,53 @@ import streamlit as st
 import google.generativeai as genai
 import requests
 from datetime import date
-import os
 import base64
+import os
 import streamlit.components.v1 as components
-import re
 
-# ... (Garde toute la partie Style CSS et Avatar identique à la version précédente) ...
+# [Garde ton style CSS intact ici...]
 
 # ---------------------------------------------------------
-# API : Correction définitive du modèle (Sans préfixe "models/")
+# Fonction API ultra-simplifiée (Force la version stable)
 # ---------------------------------------------------------
-def generate_clean_report(prompt_text, system_instruction):
-    gemini_keys = [st.secrets[k] for k in st.secrets if "GEMINI_API_KEY" in k]
-    if not gemini_keys: return None, "Aucune clé API configurée."
+def generate_report_v1(prompt_text, system_instruction):
+    # Récupérer toutes les clés
+    keys = [st.secrets[k] for k in st.secrets if "GEMINI_API_KEY" in k]
     
-    # Utilisation du nom simple 'gemini-1.5-flash'
-    # C'est la syntaxe la plus stable pour éviter l'erreur 404 v1beta
-    model_name = "gemini-1.5-flash"
-    
-    for api_key in gemini_keys:
+    for api_key in keys:
         try:
+            # Configurer le SDK
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name=model_name, system_instruction=system_instruction)
+            
+            # Utiliser le modèle stable sans préfixe "models/"
+            model = genai.GenerativeModel(
+                model_name="gemini-1.5-flash",
+                system_instruction=system_instruction
+            )
+            
             response = model.generate_content(prompt_text)
             
             if response and response.text:
-                txt = response.text.strip()
-                # Nettoyage automatique du brouillon si présent
-                start_match = re.search(r"1\.\s?📌", txt)
-                if start_match: txt = txt[start_match.start():]
-                return txt, None
+                return response.text, None
+            else:
+                return None, "Réponse vide reçue"
+                
         except Exception as e:
-            # On log l'erreur pour comprendre, mais on continue avec la clé suivante
+            # On continue sur la prochaine clé si celle-ci échoue
             continue
             
-    return None, "Erreur API : Vérifiez que vos clés sont valides et que google-generativeai est à jour."
+    return None, "Toutes les clés ont échoué. Vérifiez vos quotas ou vos clés."
 
 # ---------------------------------------------------------
-# Interface (Reste de la logique identique)
+# Interface (Exemple de bouton)
 # ---------------------------------------------------------
-# (Ici, reprends exactement la même interface que ton code précédent)
+if st.button("🚀 LANCER L'ANALYSE"):
+    # ... (ton code de vérification coingecko reste ici) ...
+    
+    # Appel de la fonction simplifiée
+    res, gen_err = generate_report_v1(prompt, SYSTEM_INSTRUCTION)
+    
+    if res:
+        st.markdown(res)
+    else:
+        st.error(f"Erreur API : {gen_err}")
