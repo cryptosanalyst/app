@@ -27,6 +27,12 @@ referrer = query_params.get("ref", None)
 if "user_pseudo" not in st.session_state:
     st.session_state.user_pseudo = query_params.get("user", "")
 
+if "referral_count" not in st.session_state:
+    try:
+        st.session_state.referral_count = int(query_params.get("ref_cnt", "0"))
+    except ValueError:
+        st.session_state.referral_count = 0
+
 def save_pseudo():
     if st.session_state.pseudo_input.strip():
         pseudo_clean = st.session_state.pseudo_input.strip().lower().replace(" ", "_")
@@ -34,7 +40,7 @@ def save_pseudo():
         st.query_params["user"] = pseudo_clean
 
 # ---------------------------------------------------------
-# 3. CSS Personnalisé & Interface Dynamique
+# 3. CSS Personnalisé - Bordure Tournante & UI Modernisée
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -83,7 +89,7 @@ st.markdown("""
         z-index: 1;
     }
 
-    /* Avatar & Animation de rotation */
+    /* --- CONTENEUR AVATAR & BORDURE DOURNANTE --- */
     .avatar-wrapper {
         display: flex;
         justify-content: center;
@@ -92,24 +98,53 @@ st.markdown("""
         margin-bottom: 20px;
     }
 
+    .avatar-frame {
+        position: relative;
+        width: 126px;
+        height: 126px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #30363d;
+        padding: 3px;
+    }
+
     .avatar-img {
         width: 120px !important;
         height: 120px !important;
         border-radius: 50% !important;
-        border: 3px solid #ffd700 !important;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3) !important;
         object-fit: cover !important;
-        transition: all 0.3s ease;
+        z-index: 2;
+        position: relative;
     }
 
-    .avatar-img.spinning {
-        animation: spin-glow 1.8s linear infinite !important;
+    /* L'AVATAR NE TOURNE PAS - C'est cet anneau lumineux qui tourne autour */
+    .avatar-frame.spinning::before {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        right: -4px;
+        bottom: -4px;
+        border-radius: 50%;
+        background: conic-gradient(from 0deg, transparent 20%, #ffd700 80%, #ffffff 100%);
+        animation: spin-ring 1.2s linear infinite;
+        z-index: 1;
     }
 
-    @keyframes spin-glow {
-        0% { transform: rotate(0deg); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); }
-        50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
-        100% { transform: rotate(360deg); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); }
+    .avatar-frame.spinning::after {
+        content: '';
+        position: absolute;
+        inset: 3px;
+        background: #0b0e14;
+        border-radius: 50%;
+        z-index: 1;
+    }
+
+    @keyframes spin-ring {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 
     h1 {
@@ -237,7 +272,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. Avatar Dynamique
+# 4. Affichage de l'Avatar Fixe avec Anneau Lumineux Tournant
 # ---------------------------------------------------------
 def get_image_base64(file_path):
     with open(file_path, "rb") as f:
@@ -257,7 +292,9 @@ def render_avatar(is_analyzing=False):
         spin_class = "spinning" if is_analyzing else ""
         avatar_container.markdown(f"""
             <div class="avatar-wrapper">
-                <img class="avatar-img {spin_class}" src="data:image/jpeg;base64,{img_b64}" alt="Avatar">
+                <div class="avatar-frame {spin_class}">
+                    <img class="avatar-img" src="data:image/jpeg;base64,{img_b64}" alt="Avatar">
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -267,13 +304,13 @@ st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<div class='welcome-msg'>Bienvenue, je suis l'agent IA de Cryptos Analyst. Je t'aide à analyser rapidement tes projets crypto.</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 5. Module Pseudo & Lien de Parrainage
+# 5. Module Pseudo & Dashboard Filleuls Actifs
 # ---------------------------------------------------------
 if not st.session_state.user_pseudo:
     st.markdown("""
         <div style="background-color: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 18px; margin-bottom: 20px; text-align: center;">
             <p style="color: #ffd700; font-weight: 700; margin: 0 0 6px 0;">👤 Entre ton pseudo pour débloquer ton lien d'invitation</p>
-            <p style="color: #8b949e; font-size: 0.85rem; margin: 0;">Invite tes amis à analyser leurs projets préférés.</p>
+            <p style="color: #8b949e; font-size: 0.85rem; margin: 0;">Invite tes amis et suis tes parrainages en direct.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -284,15 +321,26 @@ if not st.session_state.user_pseudo:
         st.button("Valider 🚀", on_click=save_pseudo, use_container_width=True)
 else:
     invite_link = f"{BASE_URL}?ref={st.session_state.user_pseudo}"
+    ref_count = st.session_state.referral_count
+    
     st.markdown(f"""
-        <div style="background-color: #161b22; border: 1px dashed #ffd700; border-radius: 12px; padding: 12px; margin-bottom: 20px; text-align: center;">
-            <p style="margin: 0; font-size: 0.9rem; color: #ffffff;">Bienvenue <b>@{st.session_state.user_pseudo}</b> ! ⚡</p>
-            <p style="margin: 4px 0; font-size: 0.8rem; color: #8b949e;">Ton lien d'invitation : <code style="background: #0d0e12 !important; color: #ffd700 !important;">{invite_link}</code></p>
+        <div style="background-color: #161b22; border: 1px dashed #ffd700; border-radius: 12px; padding: 14px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <span style="font-size: 0.95rem; color: #ffffff;">Bienvenue <b>@{st.session_state.user_pseudo}</b> ! ⚡</span>
+                </div>
+                <div style="background-color: rgba(255, 215, 0, 0.1); border: 1px solid #ffd700; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; color: #ffd700; font-weight: bold;">
+                    👥 Filleuls vérifiés : {ref_count}
+                </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.82rem; color: #8b949e; text-align: center;">
+                Ton lien d'invitation : <code style="background: #0d0e12 !important; color: #ffd700 !important;">{invite_link}</code>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 6. Gestion des Quotas Quotidiens (LocalStorage + Session)
+# 6. Synchronisation JS & Validation des Parrainages
 # ---------------------------------------------------------
 TODAY = str(date.today())
 url_count = query_params.get("cnt", None)
@@ -309,9 +357,12 @@ if "daily_request_count" not in st.session_state:
 
 requests_left = max(0, 2 - st.session_state.daily_request_count)
 
+# Validation : Si un parrain est présent et que le filleul effectue son premier lancement
 js_sync = f"""
 <script>
     const today = "{TODAY}";
+    const referrer = "{referrer if referrer else ''}";
+    
     let storedDate = localStorage.getItem("crypto_analyst_date");
     let storedCount = localStorage.getItem("crypto_analyst_count");
 
@@ -366,7 +417,7 @@ def generate_share_buttons(crypto_name, crypto_symbol, user_pseudo=""):
     """
 
 # ---------------------------------------------------------
-# 8. Services API CoinGecko & Gemini
+# 8. API CoinGecko & Gemini Failover
 # ---------------------------------------------------------
 @st.cache_data(ttl=3600)
 def get_coingecko_data(query):
@@ -470,7 +521,7 @@ Structure :
 """
 
 # ---------------------------------------------------------
-# 9. Execution Principale
+# 9. Exécution Principale
 # ---------------------------------------------------------
 crypto_input = st.text_input("Quelle crypto veux-tu décortiquer aujourd'hui ?", placeholder="Tape un ticker ou nom (ex: BGB, Solana, ONDO, SUI, BTC...)")
 
@@ -490,6 +541,7 @@ if submit_button and crypto_input:
     if requests_left <= 0:
         st.error("Limite atteinte.")
     else:
+        # Activation de l'anneau tournant (L'avatar reste fixe)
         render_avatar(is_analyzing=True)
         
         with st.spinner(f"Recherche et vérification des données pour {crypto_input}..."):
@@ -511,6 +563,8 @@ Données CoinGecko vérifiées pour {cg_data['name']} ({cg_data['symbol']}) :
                 prompt_final = f"{data_context}\n\nEffectue une recherche Web et rédige l'analyse complète de : {cg_data['name']} ({cg_data['symbol']})"
 
                 response_text, gen_error = generate_content_with_key_failover(prompt_final, SYSTEM_INSTRUCTION)
+                
+                # Arrêt de l'anneau tournant
                 render_avatar(is_analyzing=False)
 
                 if response_text:
@@ -528,7 +582,6 @@ Données CoinGecko vérifiées pour {cg_data['name']} ({cg_data['symbol']}) :
                     st.markdown("<hr style='border-color: #30363d; margin: 2rem 0;'>", unsafe_allow_html=True)
                     st.markdown(response_text)
                     
-                    # Boutons de Partage
                     share_html = generate_share_buttons(
                         cg_data['name'], 
                         cg_data['symbol'], 
