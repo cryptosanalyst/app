@@ -16,7 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-BASE_URL = st.secrets.get("APP_URL", "https://votre-app.streamlit.app")
+BASE_URL = st.secrets.get("APP_URL", "https://meagotbnwddhsaa6d3pfln.streamlit.app")
 
 # ---------------------------------------------------------
 # 2. Gestion des Pseudos & Parrainage (URL & Session)
