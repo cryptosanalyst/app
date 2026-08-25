@@ -4,30 +4,30 @@ import requests
 from datetime import date
 import os
 import base64
+import urllib.parse
+import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. Configuration et Style CSS (Avec Background Dynamique Top Cryptos)
+# 1. Configuration et Style CSS (Avatar Animé & Background Z-Index)
 # ---------------------------------------------------------
 st.set_page_config(page_title="Cryptos Analyst IA", page_icon="🤖", layout="wide")
 
 st.markdown("""
     <style>
-    /* Fond sombre général */
     stApp, .main, [data-testid="stAppViewContainer"] { 
         background-color: #0d0e12 !important; 
         color: #ffffff !important; 
     }
     
-    /* Conteneur principal au premier plan */
     .block-container { 
         max-width: 850px !important; 
         padding-top: 2rem !important; 
         margin: 0 auto !important; 
         position: relative;
-        z-index: 10;
+        z-index: 10 !important;
     }
 
-    /* --- BACKGROUND DYNAMIQUE : BULLES FLOTTANTES CRYPTO --- */
+    /* --- BACKGROUND DYNAMIQUE EN ARRIÈRE-PLAN STRICT --- */
     .crypto-bubbles-bg {
         position: fixed;
         top: 0;
@@ -35,20 +35,22 @@ st.markdown("""
         width: 100vw;
         height: 100vh;
         overflow: hidden;
-        z-index: 1;
+        z-index: 0 !important;
         pointer-events: none;
+        opacity: 0.25;
+        filter: blur(1px);
     }
 
     .crypto-bubble {
         position: absolute;
         bottom: -100px;
-        background: rgba(22, 27, 34, 0.75);
+        background: rgba(22, 27, 34, 0.6);
         border: 2px solid #ffd700;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
         animation: floatUp 15s infinite linear;
     }
 
@@ -61,8 +63,8 @@ st.markdown("""
 
     @keyframes floatUp {
         0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-        10% { opacity: 0.6; }
-        90% { opacity: 0.6; }
+        10% { opacity: 0.5; }
+        90% { opacity: 0.5; }
         100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
     }
 
@@ -75,10 +77,53 @@ st.markdown("""
     .bubble-7 { left: 82%; width: 50px; height: 50px; animation-duration: 15s; animation-delay: 6s; }
     .bubble-8 { left: 92%; width: 60px; height: 60px; animation-duration: 17s; animation-delay: 2.5s; }
 
-    /* --- DESIGN DES ELEMENTS --- */
-    .avatar-wrapper { display: flex; justify-content: center; margin-bottom: 15px; }
-    .avatar-wrapper img { width: 120px !important; height: 120px !important; border-radius: 50% !important; border: 3px solid #ffd700 !important; object-fit: cover; }
+    /* --- AVATAR AVEC CERCLAGE DE ROTATION DYNAMIQUE --- */
+    .avatar-wrapper { 
+        display: flex; 
+        justify-content: center; 
+        margin-bottom: 15px; 
+    }
     
+    .avatar-container {
+        position: relative;
+        width: 130px;
+        height: 130px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .avatar-img { 
+        width: 115px !important; 
+        height: 115px !important; 
+        border-radius: 50% !important; 
+        object-fit: cover;
+        z-index: 2;
+    }
+
+    .avatar-ring {
+        position: absolute;
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        border-top: 3px solid #ffd700;
+        border-right: 3px solid #ffd700;
+        z-index: 1;
+        transition: all 0.3s ease;
+    }
+
+    /* Animation activée pendant l'analyse */
+    .avatar-ring.loading {
+        animation: spinRing 1s linear infinite;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+    }
+
+    @keyframes spinRing {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
     h1 { color: #ffd700 !important; text-align: center; font-weight: 800 !important; }
     .welcome-msg { text-align: center; color: #ffffff !important; font-size: 1.15rem; font-weight: 600; margin-bottom: 2rem; }
     
@@ -87,6 +132,30 @@ st.markdown("""
     
     .stButton>button { background-color: #ffd700 !important; color: #000000 !important; font-weight: bold !important; width: 100% !important; border-radius: 8px !important; border: none !important; height: 50px !important; }
     .stButton>button:hover { background-color: #e6c200 !important; color: #000000 !important; }
+
+    /* Boutons de partage sociaux */
+    .share-container {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 15px;
+    }
+    .share-btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        color: #ffffff !important;
+        font-weight: bold;
+        text-decoration: none !important;
+        font-size: 0.9em;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .share-wa { background-color: #25D366; }
+    .share-tg { background-color: #0088cc; }
+    .share-fb { background-color: #1877F2; }
+    .share-tw { background-color: #1DA1F2; }
     </style>
 
     <div class="crypto-bubbles-bg">
@@ -102,24 +171,70 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Avatar et Limites
+# 2. Persistance Navigateur (Limite 2/jour Inviolable)
 # ---------------------------------------------------------
-def get_image_base64(file_path):
-    with open(file_path, "rb") as f: return base64.b64encode(f.read()).decode()
+TODAY = str(date.today())
 
-avatar_filename = next((f for f in ["avatar.jpg", "avatar.jpeg", "avatar.png"] if os.path.exists(f)), None)
-if avatar_filename:
-    st.markdown(f'<div class="avatar-wrapper"><img src="data:image/jpeg;base64,{get_image_base64(avatar_filename)}"></div>', unsafe_allow_html=True)
+# Synchronisation du quota avec le LocalStorage du navigateur
+js_limiter = f"""
+<script>
+    const today = "{TODAY}";
+    const storedDate = localStorage.getItem("ca_date");
+    let count = parseInt(localStorage.getItem("ca_count") || "0");
+
+    if (storedDate !== today) {{
+        localStorage.setItem("ca_date", today);
+        localStorage.setItem("ca_count", "0");
+        count = 0;
+    }}
+    
+    // Transmission vers la session Streamlit
+    const queryParams = new URLSearchParams(window.location.search);
+    if (!queryParams.has('user_count')) {{
+        queryParams.set('user_count', count);
+        window.location.search = queryParams.toString();
+    }}
+</script>
+"""
+components.html(js_limiter, height=0)
+
+user_count_param = st.query_params.get("user_count", "0")
+try:
+    current_user_count = int(user_count_param)
+except ValueError:
+    current_user_count = 0
+
+requests_left = max(0, 2 - current_user_count)
+
+# ---------------------------------------------------------
+# 3. Affichage Avatar (Statique vs Dynamique)
+# ---------------------------------------------------------
+def render_avatar(is_loading=False):
+    def get_image_base64(file_path):
+        with open(file_path, "rb") as f: return base64.b64encode(f.read()).decode()
+
+    avatar_filename = next((f for f in ["avatar.jpg", "avatar.jpeg", "avatar.png"] if os.path.exists(f)), None)
+    ring_class = "avatar-ring loading" if is_loading else "avatar-ring"
+    
+    if avatar_filename:
+        st.markdown(f'''
+            <div class="avatar-wrapper">
+                <div class="avatar-container">
+                    <div class="{ring_class}"></div>
+                    <img class="avatar-img" src="data:image/jpeg;base64,{get_image_base64(avatar_filename)}">
+                </div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+avatar_placeholder = st.empty()
+with avatar_placeholder.container():
+    render_avatar(is_loading=False)
 
 st.markdown("<h1>Cryptos Analyst IA</h1>", unsafe_allow_html=True)
 st.markdown("<div class='welcome-msg'>Bienvenue je suis l'agent IA de cryptos analyst je vous aide à analyser rapidement vos projets crypto</div>", unsafe_allow_html=True)
 
-TODAY = str(date.today())
-if "daily_request_count" not in st.session_state: st.session_state.daily_request_count = 0
-requests_left = max(0, 2 - st.session_state.daily_request_count)
-
 # ---------------------------------------------------------
-# Cache & API CoinGecko
+# 4. Cache & APIs
 # ---------------------------------------------------------
 @st.cache_data(ttl=43200)
 def get_coingecko_data(query):
@@ -144,9 +259,6 @@ def get_coingecko_data(query):
         }, None
     except Exception as e: return None, f"Erreur API CoinGecko : {str(e)}"
 
-# ---------------------------------------------------------
-# API Gemini : Modèles actuels (Gemini 3.6 Flash)
-# ---------------------------------------------------------
 def generate_content_with_key_failover(prompt_text, system_instruction):
     gemini_keys = [st.secrets[k] for k in st.secrets if "GEMINI_API_KEY" in k]
     if not gemini_keys: return None, "Aucune clé API trouvée dans secrets.toml"
@@ -159,10 +271,7 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
             genai.configure(api_key=api_key)
             for model_name in candidate_models:
                 try:
-                    model = genai.GenerativeModel(
-                        model_name=model_name,
-                        system_instruction=system_instruction
-                    )
+                    model = genai.GenerativeModel(model_name=model_name, system_instruction=system_instruction)
                     response = model.generate_content(prompt_text)
                     if response and response.text:
                         return response.text, None
@@ -176,7 +285,7 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
     return None, f"Erreur de génération : {last_error}"
 
 # ---------------------------------------------------------
-# Prompt Système Strict & Barème de Notation Cohérent
+# 5. Instructions Système
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Tu es un analyste financier crypto intransigeant. Ton ton est familier, chaleureux et enthousiaste, mais extrêmement rigoureux sur l'évaluation des risques.
@@ -188,37 +297,43 @@ RÈGLES ABSOLUES :
 4. SECTION CHIFFRES EN DIRECT : Utilise STRICTEMENT et UNIQUEMENT les chiffres exacts de CoinGecko transmis dans le prompt.
 5. ACTUALITÉS & MOTEURS : Intègre les actualités fraîches des dernières 24 heures.
 
-BARÈME DE NOTATION STRICT ET OBLIGATOIRE (COHÉRENCE AVEC L'ANALYSE) :
-La note finale doit refléter fidèlement le texte de ton analyse. Interdiction d'attribuer une note supérieure à 5/10 si l'analyse relève des risques majeurs, un manque de transparence, une utilité faible ou une forte probabilité de perte en capital.
-- **0/10 à 3.5/10 (DANGER / TRÈS RISQUÉ) :** Projet hautement spéculatif, memecoin sans fond, arnaque potentielle, équipe douteuse ou tokenomics toxiques.
-- **4/10 à 5/10 (MOYEN / INCERTAIN) :** Projet faible, concurrence trop rude, absence d'utilité concrète ou adoption en berne.
-- **5.5/10 à 7/10 (SOLIDE AVEC RÉSERVES) :** Bon projet, équipe sérieuse, cas d'usage réel, mais présentant des risques de marché ou de régulation normaux.
-- **7.5/10 à 10/10 (VALEUR SÛRE / PILIER) :** Actif majeur, ultra-solide, adopté mondialement (ex: Bitcoin, Ethereum).
+BARÈME DE NOTATION STRICT ET OBLIGATOIRE :
+Interdiction d'attribuer une note supérieure à 5/10 si l'analyse relève des risques majeurs, un manque de transparence ou une utilité faible.
+- 0/10 à 3.5/10 (DANGER / TRÈS RISQUÉ)
+- 4/10 à 5/10 (MOYEN / INCERTAIN)
+- 5.5/10 à 7/10 (SOLIDE AVEC RÉSERVES)
+- 7.5/10 à 10/10 (VALEUR SÛRE / PILIER)
 
 Structure stricte :
 1. 📌 C'EST QUOI CE PROJET ? (Verdict à chaud)
-2. 📊 LES CHIFFRES EN DIRECT (Utilise obligatoirement les chiffres précis de CoinGecko : Prix, Market Cap, Volume 24h, Variation 24h/7j, Rang)
+2. 📊 LES CHIFFRES EN DIRECT (Chiffres précis de CoinGecko : Prix, Market Cap, Volume 24h, Variation 24h/7j, Rang)
 > 🎓 Minute Pédago - Explique une notion simple.
 3. 🔗 INFOS TECHNIQUES (RÉSEAUX & CONTRATS)
-4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Infos fraîches des dernières 24h)
+4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Infos des 24h)
 5. ⚠️ RISQUES À NE PAS IGNORER
 6. ⚔️ COMPARATIF CONCURRENCE
-7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 respectant impérativement le barème strict ci-dessus).
+7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 selon le barème).
 """
 
 # ---------------------------------------------------------
-# Interface Utilisateur & Exécution
+# 6. Interface Utilisateur & Exécution
 # ---------------------------------------------------------
 crypto_input = st.text_input("Quelle crypto veux-tu décortiquer ?", placeholder="ex: BGB, SUI...")
 if requests_left > 0: st.caption(f"⚡ Crédits restants : **{requests_left} / 2**")
-else: st.warning("⚠️ Limite atteinte.")
+else: st.warning("⚠️ Tu as atteint ta limite de 2 analyses quotidiennes. Reviens demain !")
 
 if st.button("🚀 LANCER L'ANALYSE", disabled=(requests_left <= 0)):
+    # Activation du cerclage dynamique autour de l'avatar
+    with avatar_placeholder.container():
+        render_avatar(is_loading=True)
+
     cg_data, err = get_coingecko_data(crypto_input)
     if err: 
         st.error(err)
+        with avatar_placeholder.container(): render_avatar(is_loading=False)
     elif not cg_data: 
         st.warning("😔 Crypto introuvable sur CoinGecko.")
+        with avatar_placeholder.container(): render_avatar(is_loading=False)
     else:
         platforms = "\n".join([f"- {n.upper()}: `{a}`" for n, a in cg_data['platforms'].items() if a]) if cg_data['platforms'] else "Réseau natif ou non applicable."
         
@@ -234,15 +349,47 @@ DONNÉES OFFICIELLES COINGECKO EN DIRECT :
 - Adresses de contrats / Réseaux :
 {platforms}
 """
-        prompt = f"{coingecko_context}\n\nRédige l'analyse complète de ce projet en incluant ses actualités les plus récentes des dernières 24 heures, et attribue une note en accord parfait avec le niveau de risque réel du projet."
+        prompt = f"{coingecko_context}\n\nRédige l'analyse complète de ce projet en incluant ses actualités les plus récentes des dernières 24 heures."
         
-        with st.spinner("Récupération des données CoinGecko et rédaction du rapport..."):
+        with st.spinner("Récupération des données et rédaction du rapport..."):
             res, gen_err = generate_content_with_key_failover(prompt, SYSTEM_INSTRUCTION)
+            
+            # Arrêt de la rotation autour de l'avatar
+            with avatar_placeholder.container():
+                render_avatar(is_loading=False)
+
             if res:
-                st.session_state.daily_request_count += 1
+                # Incrémentation et sauvegarde locale de la limite
+                new_count = current_user_count + 1
+                components.html(f"<script>localStorage.setItem('ca_count', '{new_count}');</script>", height=0)
+                st.query_params["user_count"] = str(new_count)
+                
                 st.markdown(res)
                 st.markdown("---")
-                st.markdown("### 📋 Copier le rapport")
+                
+                # --- BOUTONS DE PARTAGE SOCIAUX ---
+                st.markdown("### 📢 Partager ce rapport d'analyse")
+                
+                share_text = f"🤖 Découvre l'analyse complète de {cg_data['name']} ({cg_data['symbol']}) générée par Cryptos Analyst IA !"
+                encoded_text = urllib.parse.quote(share_text)
+                encoded_url = urllib.parse.quote("https://cryptos-analyst-ia.streamlit.app")
+                
+                wa_url = f"https://api.whatsapp.com/send?text={encoded_text}%20{encoded_url}"
+                tg_url = f"https://t.me/share/url?url={encoded_url}&text={encoded_text}"
+                fb_url = f"https://www.facebook.com/sharer/sharer.php?u={encoded_url}"
+                tw_url = f"https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_url}"
+
+                st.markdown(f"""
+                <div class="share-container">
+                    <a class="share-btn share-wa" href="{wa_url}" target="_blank">📱 WhatsApp</a>
+                    <a class="share-btn share-tg" href="{tg_url}" target="_blank">✈️ Telegram</a>
+                    <a class="share-btn share-fb" href="{fb_url}" target="_blank">📘 Facebook</a>
+                    <a class="share-btn share-tw" href="{tw_url}" target="_blank">🐦 X (Twitter)</a>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("---")
+                st.markdown("### 📋 Copier le rapport texte")
                 st.code(res, language="markdown")
             else: 
                 st.error(f"Erreur de génération : {gen_err}")
