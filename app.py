@@ -37,7 +37,7 @@ st.markdown("""
         overflow: hidden;
         z-index: 0 !important;
         pointer-events: none;
-        opacity: 0.25;
+        opacity: 0.5;
         filter: blur(1px);
     }
 
@@ -372,7 +372,7 @@ DONNÉES OFFICIELLES COINGECKO EN DIRECT :
                 
                 share_text = f"🤖 Découvre l'analyse complète de {cg_data['name']} ({cg_data['symbol']}) générée par Cryptos Analyst IA !"
                 encoded_text = urllib.parse.quote(share_text)
-                encoded_url = urllib.parse.quote("https://cryptos-analyst-ia.streamlit.app")
+                encoded_url = urllib.parse.quote("https://meagotbnwddhsaa6d3pfln.streamlit.app")
                 
                 wa_url = f"https://api.whatsapp.com/send?text={encoded_text}%20{encoded_url}"
                 tg_url = f"https://t.me/share/url?url={encoded_url}&text={encoded_text}"
