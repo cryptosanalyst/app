@@ -4,7 +4,6 @@ import requests
 from datetime import date
 import os
 import base64
-import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
 # 1. Configuration et Style CSS (Avec Background Dynamique Top Cryptos)
@@ -19,7 +18,7 @@ st.markdown("""
         color: #ffffff !important; 
     }
     
-    /* Conteneur principal au premier plan (z-index élevé) */
+    /* Conteneur principal au premier plan */
     .block-container { 
         max-width: 850px !important; 
         padding-top: 2rem !important; 
@@ -60,25 +59,13 @@ st.markdown("""
         border-radius: 50%;
     }
 
-    /* Animations aléatoires pour les bulles */
     @keyframes floatUp {
-        0% {
-            transform: translateY(0) rotate(0deg);
-            opacity: 0;
-        }
-        10% {
-            opacity: 0.6;
-        }
-        90% {
-            opacity: 0.6;
-        }
-        100% {
-            transform: translateY(-110vh) rotate(360deg);
-            opacity: 0;
-        }
+        0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+        10% { opacity: 0.6; }
+        90% { opacity: 0.6; }
+        100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
     }
 
-    /* Positions et vitesses variées des bulles */
     .bubble-1 { left: 5%; width: 50px; height: 50px; animation-duration: 12s; animation-delay: 0s; }
     .bubble-2 { left: 15%; width: 70px; height: 70px; animation-duration: 18s; animation-delay: 2s; }
     .bubble-3 { left: 28%; width: 45px; height: 45px; animation-duration: 14s; animation-delay: 4s; }
@@ -98,12 +85,10 @@ st.markdown("""
     .stMarkdown code { background-color: transparent !important; color: #ffd700 !important; font-weight: bold !important; font-size: 1.1em !important; }
     blockquote { border-left: 3px solid #ffd700 !important; background-color: #161b22 !important; color: #ffd700 !important; padding: 10px 15px !important; }
     
-    /* Bouton Jaune texte Noir */
     .stButton>button { background-color: #ffd700 !important; color: #000000 !important; font-weight: bold !important; width: 100% !important; border-radius: 8px !important; border: none !important; height: 50px !important; }
     .stButton>button:hover { background-color: #e6c200 !important; color: #000000 !important; }
     </style>
 
-    <!-- HTML DU BACKGROUND DYNAMIQUE (Logos Top Cryptos) -->
     <div class="crypto-bubbles-bg">
         <div class="crypto-bubble bubble-1"><img src="https://assets.coingecko.com/coins/images/1/large/bitcoin.png" alt="BTC"></div>
         <div class="crypto-bubble bubble-2"><img src="https://assets.coingecko.com/coins/images/279/large/ethereum.png" alt="ETH"></div>
@@ -191,27 +176,34 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
     return None, f"Erreur de génération : {last_error}"
 
 # ---------------------------------------------------------
-# Prompt Système Strict (Anti-Brouillon & Exactitude)
+# Prompt Système Strict & Barème de Notation Cohérent
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un analyste financier crypto. Ton ton est familier, chaleureux et enthousiaste.
+Tu es un analyste financier crypto intransigeant. Ton ton est familier, chaleureux et enthousiaste, mais extrêmement rigoureux sur l'évaluation des risques.
 
 RÈGLES ABSOLUES :
 1. Tu ne dois générer QUE le rapport final en Markdown.
-2. NE GÉNÈRE AUCUN plan de pensée, aucune étape de recherche interne, aucun brouillon, aucun texte d'introduction type "Voici mon analyse". 
+2. NE GÉNÈRE AUCUN plan de pensée, aucune étape de recherche interne, aucun brouillon. 
 3. COMMENCE DIRECTEMENT par le titre de la section 1 ("1. 📌 C'EST QUOI CE PROJET ?").
-4. SECTION CHIFFRES EN DIRECT : Utilise STRICTEMENT et UNIQUEMENT les chiffres exacts de CoinGecko transmis dans le prompt (Prix, Market Cap, Volume 24h, Variations, Rang). N'invente ni n'estime aucun chiffre.
-5. ACTUALITÉS & MOTEURS : Intègre les actualités fraîches et dynamiques des dernières 24 heures concernant le projet.
+4. SECTION CHIFFRES EN DIRECT : Utilise STRICTEMENT et UNIQUEMENT les chiffres exacts de CoinGecko transmis dans le prompt.
+5. ACTUALITÉS & MOTEURS : Intègre les actualités fraîches des dernières 24 heures.
+
+BARÈME DE NOTATION STRICT ET OBLIGATOIRE (COHÉRENCE AVEC L'ANALYSE) :
+La note finale doit refléter fidèlement le texte de ton analyse. Interdiction d'attribuer une note supérieure à 5/10 si l'analyse relève des risques majeurs, un manque de transparence, une utilité faible ou une forte probabilité de perte en capital.
+- **0/10 à 3.5/10 (DANGER / TRÈS RISQUÉ) :** Projet hautement spéculatif, memecoin sans fond, arnaque potentielle, équipe douteuse ou tokenomics toxiques.
+- **4/10 à 5/10 (MOYEN / INCERTAIN) :** Projet faible, concurrence trop rude, absence d'utilité concrète ou adoption en berne.
+- **5.5/10 à 7/10 (SOLIDE AVEC RÉSERVES) :** Bon projet, équipe sérieuse, cas d'usage réel, mais présentant des risques de marché ou de régulation normaux.
+- **7.5/10 à 10/10 (VALEUR SÛRE / PILIER) :** Actif majeur, ultra-solide, adopté mondialement (ex: Bitcoin, Ethereum).
 
 Structure stricte :
 1. 📌 C'EST QUOI CE PROJET ? (Verdict à chaud)
 2. 📊 LES CHIFFRES EN DIRECT (Utilise obligatoirement les chiffres précis de CoinGecko : Prix, Market Cap, Volume 24h, Variation 24h/7j, Rang)
 > 🎓 Minute Pédago - Explique une notion simple.
 3. 🔗 INFOS TECHNIQUES (RÉSEAUX & CONTRATS)
-4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Mets en avant les infos fraîches des dernières 24h)
+4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Infos fraîches des dernières 24h)
 5. ⚠️ RISQUES À NE PAS IGNORER
 6. ⚔️ COMPARATIF CONCURRENCE
-7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 selon le barème strict : 0-3.5=Danger, 4-5.5=Moyen, 6-7.5=Solide, 8-10=Pilier).
+7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 respectant impérativement le barème strict ci-dessus).
 """
 
 # ---------------------------------------------------------
@@ -242,7 +234,7 @@ DONNÉES OFFICIELLES COINGECKO EN DIRECT :
 - Adresses de contrats / Réseaux :
 {platforms}
 """
-        prompt = f"{coingecko_context}\n\nRédige l'analyse complète de ce projet en incluant ses actualités les plus récentes des dernières 24 heures et en respectant strictement la structure exigée."
+        prompt = f"{coingecko_context}\n\nRédige l'analyse complète de ce projet en incluant ses actualités les plus récentes des dernières 24 heures, et attribue une note en accord parfait avec le niveau de risque réel du projet."
         
         with st.spinner("Récupération des données CoinGecko et rédaction du rapport..."):
             res, gen_err = generate_content_with_key_failover(prompt, SYSTEM_INSTRUCTION)
