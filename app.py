@@ -364,7 +364,7 @@ DONNÉES OFFICIELLES COINGECKO EN DIRECT :
 - Adresses de contrats / Réseaux :
 {platforms}
 """
-       prompt = f"""
+        prompt = f"""
 {coingecko_context}
 
 DATE DU JOUR : {TODAY}
