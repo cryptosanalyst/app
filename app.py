@@ -38,7 +38,7 @@ st.markdown("""
         z-index: 0 !important;
         pointer-events: none;
         opacity: 0.5;
-        filter: blur(1px);
+    
     }
 
     .crypto-bubble {
