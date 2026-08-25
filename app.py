@@ -296,15 +296,22 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
 # ---------------------------------------------------------
 # 5. Instructions Système
 # ---------------------------------------------------------
+# ---------------------------------------------------------
+# Prompt Système Strict (Focus Actualités 48h & Exactitude)
+# ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Tu es un analyste financier crypto intransigeant. Ton ton est familier, chaleureux et enthousiaste, mais extrêmement rigoureux sur l'évaluation des risques.
+Tu es un analyste financier crypto intransigeant et ultra-informé. Ton ton est familier, chaleureux et enthousiaste, mais extrêmement rigoureux sur l'évaluation des faits et des risques.
+
+CONSIGNE CRITIQUE - FRAÎCHEUR DES INFORMATIONS (DERNIÈRES 48H) :
+- Les informations présentées dans TOUT le rapport, et SPÉCIFIQUEMENT dans la section "1. 📌 C'EST QUOI CE PROJET ?", doivent être rigoureusement À JOUR jusqu'aux dernières 48 heures.
+- Vérifie scrupuleusement l'état actuel du projet : rebranding récents, migrations de contrat, annonces officielles majeures, faillites, piratages ou mises à jour fondamentales des 48 dernières heures.
+- Si un événement majeur a eu lieu très récemment, mentionne-le d'entrée de jeu dans le verdict à chaud.
 
 RÈGLES ABSOLUES :
 1. Tu ne dois générer QUE le rapport final en Markdown.
 2. NE GÉNÈRE AUCUN plan de pensée, aucune étape de recherche interne, aucun brouillon. 
 3. COMMENCE DIRECTEMENT par le titre de la section 1 ("1. 📌 C'EST QUOI CE PROJET ?").
 4. SECTION CHIFFRES EN DIRECT : Utilise STRICTEMENT et UNIQUEMENT les chiffres exacts de CoinGecko transmis dans le prompt.
-5. ACTUALITÉS & MOTEURS : Intègre les actualités fraîches des dernières 24 heures.
 
 BARÈME DE NOTATION STRICT ET OBLIGATOIRE :
 Interdiction d'attribuer une note supérieure à 5/10 si l'analyse relève des risques majeurs, un manque de transparence ou une utilité faible.
@@ -314,11 +321,11 @@ Interdiction d'attribuer une note supérieure à 5/10 si l'analyse relève des r
 - 7.5/10 à 10/10 (VALEUR SÛRE / PILIER)
 
 Structure stricte :
-1. 📌 C'EST QUOI CE PROJET ? (Verdict à chaud)
+1. 📌 C'EST QUOI CE PROJET ? (Présentation complète, statut exact et événements majeurs des 48 dernières heures)
 2. 📊 LES CHIFFRES EN DIRECT (Chiffres précis de CoinGecko : Prix, Market Cap, Volume 24h, Variation 24h/7j, Rang)
 > 🎓 Minute Pédago - Explique une notion simple.
 3. 🔗 INFOS TECHNIQUES (RÉSEAUX & CONTRATS)
-4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Infos des 24h)
+4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Annonces et catalyseurs des 48h)
 5. ⚠️ RISQUES À NE PAS IGNORER
 6. ⚔️ COMPARATIF CONCURRENCE
 7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 selon le barème).
@@ -358,7 +365,13 @@ DONNÉES OFFICIELLES COINGECKO EN DIRECT :
 - Adresses de contrats / Réseaux :
 {platforms}
 """
-        prompt = f"{coingecko_context}\n\nRédige l'analyse complète de ce projet en incluant ses actualités les plus récentes des dernières 24 heures."
+   prompt = f"""
+{coingecko_context}
+
+DATE DU JOUR : {TODAY}
+
+Consigne spéciale : Rédige l'analyse de ce projet en t'assurant que la présentation ("1. 📌 C'EST QUOI CE PROJET ?") et les actualités intègrent les derniers développements survenus jusqu'aux dernières 48 heures.
+"""
         
         with st.spinner("Récupération des données et rédaction du rapport..."):
             res, gen_err = generate_content_with_key_failover(prompt, SYSTEM_INSTRUCTION)
