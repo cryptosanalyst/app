@@ -14,6 +14,15 @@ st.set_page_config(page_title="Cryptos Analyst IA", page_icon="🤖", layout="wi
 
 st.markdown("""
     <style>
+ /* Importation de la famille de polices Montserrat depuis Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+
+    /* Application universelle de Montserrat sur tous les textes de l'application */
+    html, body, [class*="css"], stApp, .main, [data-testid="stAppViewContainer"], p, span, label, input, button, h1, h2, h3, h4, h5, h6 {
+        font-family: 'Montserrat', sans-serif !important;
+    }
+
+    /* Fond sombre général */
     stApp, .main, [data-testid="stAppViewContainer"] { 
         background-color: #0d0e12 !important; 
         color: #ffffff !important; 
@@ -37,7 +46,7 @@ st.markdown("""
         overflow: hidden;
         z-index: 0 !important;
         pointer-events: none;
-        opacity: 0.5;
+        opacity: 0.75;
     
     }
 
