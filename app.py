@@ -373,7 +373,7 @@ DATE DU JOUR : {TODAY}
 Consigne spéciale : Rédige l'analyse de ce projet en t'assurant que la présentation ("1. 📌 C'EST QUOI CE PROJET ?") et les actualités intègrent les derniers développements survenus jusqu'aux dernières 48 heures.
 """
         
-        with st.spinner("Récupération des données et rédaction du rapport..."):
+with st.spinner("Récupération des données et rédaction du rapport..."):
             res, gen_err = generate_content_with_key_failover(prompt, SYSTEM_INSTRUCTION)
             
             # Arrêt de la rotation autour de l'avatar
