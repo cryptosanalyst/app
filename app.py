@@ -180,11 +180,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. Persistance Navigateur (Limite 2/jour Inviolable)
+# 2. Persistance Navigateur (Sécurisée via LocalStorage sans URL)
 # ---------------------------------------------------------
 TODAY = str(date.today())
 
-# Synchronisation du quota avec le LocalStorage du navigateur
+# Vérification et synchronisation du compteur en arrière-plan (sans toucher à l'URL)
+if "user_count" not in st.session_state:
+    st.session_state.user_count = 0
+
 js_limiter = f"""
 <script>
     const today = "{TODAY}";
@@ -196,24 +199,12 @@ js_limiter = f"""
         localStorage.setItem("ca_count", "0");
         count = 0;
     }}
-    
-    // Transmission vers la session Streamlit
-    const queryParams = new URLSearchParams(window.location.search);
-    if (!queryParams.has('user_count')) {{
-        queryParams.set('user_count', count);
-        window.location.search = queryParams.toString();
-    }}
 </script>
 """
 components.html(js_limiter, height=0)
 
-user_count_param = st.query_params.get("user_count", "0")
-try:
-    current_user_count = int(user_count_param)
-except ValueError:
-    current_user_count = 0
-
-requests_left = max(0, 2 - current_user_count)
+# Récupération sécurisée du nombre de crédits restants
+requests_left = max(0, 2 - st.session_state.user_count)
 
 # ---------------------------------------------------------
 # 3. Affichage Avatar (Statique vs Dynamique)
@@ -386,9 +377,11 @@ Effectue une analyse complète et minutieuse de {cg_data['name']} ({cg_data['sym
                 render_avatar(is_loading=False)
 
             if res:
-                new_count = current_user_count + 1
+                # Incrémentation dans la session Python et mise à jour invisible du LocalStorage
+                st.session_state.user_count += 1
+                new_count = st.session_state.user_count
+                
                 components.html(f"<script>localStorage.setItem('ca_count', '{new_count}');</script>", height=0)
-                st.query_params["user_count"] = str(new_count)
                 
                 st.markdown(res)
                 st.markdown("---")
