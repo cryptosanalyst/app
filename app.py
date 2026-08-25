@@ -7,26 +7,113 @@ import base64
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. Configuration et Style CSS (Base de Référence)
+# 1. Configuration et Style CSS (Avec Background Dynamique Top Cryptos)
 # ---------------------------------------------------------
 st.set_page_config(page_title="Cryptos Analyst IA", page_icon="🤖", layout="wide")
 
 st.markdown("""
     <style>
-    stApp, .main, [data-testid="stAppViewContainer"] { background-color: #0d0e12 !important; color: #ffffff !important; }
-    .block-container { max-width: 850px !important; padding-top: 2rem !important; margin: 0 auto !important; }
+    /* Fond sombre général */
+    stApp, .main, [data-testid="stAppViewContainer"] { 
+        background-color: #0d0e12 !important; 
+        color: #ffffff !important; 
+    }
+    
+    /* Conteneur principal au premier plan (z-index élevé) */
+    .block-container { 
+        max-width: 850px !important; 
+        padding-top: 2rem !important; 
+        margin: 0 auto !important; 
+        position: relative;
+        z-index: 10;
+    }
+
+    /* --- BACKGROUND DYNAMIQUE : BULLES FLOTTANTES CRYPTO --- */
+    .crypto-bubbles-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .crypto-bubble {
+        position: absolute;
+        bottom: -100px;
+        background: rgba(22, 27, 34, 0.75);
+        border: 2px solid #ffd700;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+        animation: floatUp 15s infinite linear;
+    }
+
+    .crypto-bubble img {
+        width: 60%;
+        height: 60%;
+        object-fit: contain;
+        border-radius: 50%;
+    }
+
+    /* Animations aléatoires pour les bulles */
+    @keyframes floatUp {
+        0% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 0;
+        }
+        10% {
+            opacity: 0.6;
+        }
+        90% {
+            opacity: 0.6;
+        }
+        100% {
+            transform: translateY(-110vh) rotate(360deg);
+            opacity: 0;
+        }
+    }
+
+    /* Positions et vitesses variées des bulles */
+    .bubble-1 { left: 5%; width: 50px; height: 50px; animation-duration: 12s; animation-delay: 0s; }
+    .bubble-2 { left: 15%; width: 70px; height: 70px; animation-duration: 18s; animation-delay: 2s; }
+    .bubble-3 { left: 28%; width: 45px; height: 45px; animation-duration: 14s; animation-delay: 4s; }
+    .bubble-4 { left: 40%; width: 65px; height: 65px; animation-duration: 16s; animation-delay: 1s; }
+    .bubble-5 { left: 55%; width: 55px; height: 55px; animation-duration: 13s; animation-delay: 5s; }
+    .bubble-6 { left: 70%; width: 75px; height: 75px; animation-duration: 20s; animation-delay: 3s; }
+    .bubble-7 { left: 82%; width: 50px; height: 50px; animation-duration: 15s; animation-delay: 6s; }
+    .bubble-8 { left: 92%; width: 60px; height: 60px; animation-duration: 17s; animation-delay: 2.5s; }
+
+    /* --- DESIGN DES ELEMENTS --- */
     .avatar-wrapper { display: flex; justify-content: center; margin-bottom: 15px; }
-    .avatar-wrapper img { width: 120px !important; height: 120px !important; border-radius: 50% !important; border: 3px solid #ffd700 !important; object-fit: cover !important; }
+    .avatar-wrapper img { width: 120px !important; height: 120px !important; border-radius: 50% !important; border: 3px solid #ffd700 !important; object-fit: cover; }
+    
     h1 { color: #ffd700 !important; text-align: center; font-weight: 800 !important; }
     .welcome-msg { text-align: center; color: #ffffff !important; font-size: 1.15rem; font-weight: 600; margin-bottom: 2rem; }
-    /* Style pour les prix sans arrière-plan jaune envahissant */
+    
     .stMarkdown code { background-color: transparent !important; color: #ffd700 !important; font-weight: bold !important; font-size: 1.1em !important; }
-    /* Citations pédagogiques */
     blockquote { border-left: 3px solid #ffd700 !important; background-color: #161b22 !important; color: #ffd700 !important; padding: 10px 15px !important; }
+    
     /* Bouton Jaune texte Noir */
     .stButton>button { background-color: #ffd700 !important; color: #000000 !important; font-weight: bold !important; width: 100% !important; border-radius: 8px !important; border: none !important; height: 50px !important; }
     .stButton>button:hover { background-color: #e6c200 !important; color: #000000 !important; }
     </style>
+
+    <!-- HTML DU BACKGROUND DYNAMIQUE (Logos Top Cryptos) -->
+    <div class="crypto-bubbles-bg">
+        <div class="crypto-bubble bubble-1"><img src="https://assets.coingecko.com/coins/images/1/large/bitcoin.png" alt="BTC"></div>
+        <div class="crypto-bubble bubble-2"><img src="https://assets.coingecko.com/coins/images/279/large/ethereum.png" alt="ETH"></div>
+        <div class="crypto-bubble bubble-3"><img src="https://assets.coingecko.com/coins/images/325/large/Tether.png" alt="USDT"></div>
+        <div class="crypto-bubble bubble-4"><img src="https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png" alt="BNB"></div>
+        <div class="crypto-bubble bubble-5"><img src="https://assets.coingecko.com/coins/images/4128/large/solana.png" alt="SOL"></div>
+        <div class="crypto-bubble bubble-6"><img src="https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png" alt="XRP"></div>
+        <div class="crypto-bubble bubble-7"><img src="https://assets.coingecko.com/coins/images/5/large/dogecoin.png" alt="DOGE"></div>
+        <div class="crypto-bubble bubble-8"><img src="https://assets.coingecko.com/coins/images/975/large/cardano.png" alt="ADA"></div>
+    </div>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
@@ -73,13 +160,12 @@ def get_coingecko_data(query):
     except Exception as e: return None, f"Erreur API CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# API Gemini : Modèles actuels (Gemini 3.6 / 3.5 Flash)
+# API Gemini : Modèles actuels (Gemini 3.6 Flash)
 # ---------------------------------------------------------
 def generate_content_with_key_failover(prompt_text, system_instruction):
     gemini_keys = [st.secrets[k] for k in st.secrets if "GEMINI_API_KEY" in k]
     if not gemini_keys: return None, "Aucune clé API trouvée dans secrets.toml"
     
-    # Mise à jour des identifiants vers les modèles actuels
     candidate_models = ["gemini-3.6-flash", "gemini-3.5-flash"]
     last_error = ""
 
