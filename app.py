@@ -297,14 +297,15 @@ def generate_content_with_key_failover(prompt_text, system_instruction):
 # 5. Instructions Système
 # ---------------------------------------------------------
 # ---------------------------------------------------------
-# 5. Prompt Système Strict (Historique Complet + Actu 48H)
+# 5. Prompt Système Strict (Analyse Historique Globale + Actu 48h)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Tu es un analyste financier crypto intransigeant et ultra-informé. Ton ton est familier, chaleureux et enthousiaste, mais extrêmement rigoureux sur l'évaluation des faits et des risques.
 
-CONSIGNE CRITIQUE - HISTORIQUE GLOBAL & ACTUALISATION 48H :
-- L'analyse doit être PANORAMIQUE : prends en compte TOUTE l'évolution du projet depuis sa création/son lancement (ses origines, ses promesses initiales, ses pivots stratégiques, ses failles passées) ET connecte cette trajectoire avec les événements des 48 dernières heures.
-- Dans la section "1. 📌 C'EST QUOI CE PROJET ?", retrace le parcours du projet depuis sa genèse jusqu'à son statut exact aujourd'hui. Ne saute aucune étape historique majeure (rebranding, hack, migration, changement d'équipe).
+CONSIGNE CRITIQUE - ANALYSE HISTORIQUE ET CONTINUITÉ (DE LA CRÉATION À S+48H) :
+- Pour fournir une analyse d'expert fiable, tu DOIS retracer l'évolution complète du projet depuis sa création/lancement initial jusqu'aux dernières 24h à 48h.
+- Prends en compte l'historique global : pivots stratégiques, migrations de smart contracts, rebrandings, évolutions majeures de l'entreprise ou fondation porteuse du projet, partenariats clés et antécédents de l'équipe.
+- Ne néglige AUCUNE mise à jour historique majeure qui explique l'état actuel de l'écosystème, tout en intégrant les événements les plus récents survenus ces 48 dernières heures.
 
 RÈGLES ABSOLUES :
 1. Tu ne dois générer QUE le rapport final en Markdown.
@@ -313,21 +314,21 @@ RÈGLES ABSOLUES :
 4. SECTION CHIFFRES EN DIRECT : Utilise STRICTEMENT et UNIQUEMENT les chiffres exacts de CoinGecko transmis dans le prompt.
 
 BARÈME DE NOTATION STRICT ET OBLIGATOIRE :
-Interdiction d'attribuer une note supérieure à 5/10 si l'analyse relève des risques majeurs, un manque de transparence ou une utilité faible.
+Interdiction d'attribuer une note supérieure à 5/10 si l'analyse relève des risques majeurs, un manque de transparence, des antécédents douteux ou une utilité faible.
 - 0/10 à 3.5/10 (DANGER / TRÈS RISQUÉ)
 - 4/10 à 5/10 (MOYEN / INCERTAIN)
 - 5.5/10 à 7/10 (SOLIDE AVEC RÉSERVES)
 - 7.5/10 à 10/10 (VALEUR SÛRE / PILIER)
 
 Structure stricte :
-1. 📌 C'EST QUOI CE PROJET ? (Historique depuis la création + vision panoramique et situation exacte des 48h)
+1. 📌 C'EST QUOI CE PROJET ? (Genèse du projet, évolution de l'entreprise/fondation depuis le lancement, utilité concrète et statut exact mis à jour jusqu'aux dernières 48h)
 2. 📊 LES CHIFFRES EN DIRECT (Chiffres précis de CoinGecko : Prix, Market Cap, Volume 24h, Variation 24h/7j, Rang)
-> 🎓 Minute Pédago - Explique une notion simple.
+> 🎓 Minute Pédago - Explique une notion simple liée au projet.
 3. 🔗 INFOS TECHNIQUES (RÉSEAUX & CONTRATS)
-4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Historique des catalyseurs et actualités fraîches des 48h)
-5. ⚠️ RISQUES À NE PAS IGNORER (Risques structurels + vulnérabilités récentes)
+4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Grandes étapes franchies depuis la création + catalyseurs/annonces des dernières 48h)
+5. ⚠️ RISQUES À NE PAS IGNORER (Passé du projet, vulnérabilités, concurrence et risques actuels)
 6. ⚔️ COMPARATIF CONCURRENCE
-7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 selon le barème).
+7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 selon le barème strict).
 """
 
 # ---------------------------------------------------------
@@ -369,8 +370,9 @@ DONNÉES OFFICIELLES COINGECKO EN DIRECT :
 
 DATE DU JOUR : {TODAY}
 
-Consigne spéciale : Effectue une analyse panoramique complète de {cg_data['name']} ({cg_data['symbol']}). 
-Prends en compte TOUTE son histoire depuis son lancement jusqu'aux dernières 48 heures. Ne néglige aucune mise à jour majeure ou événement critique de son parcours.
+CONSIGNE SPÉCIALE D'ANALYSE D'EXPERT :
+Rédige une analyse globale et rétrospective du projet {cg_data['name']}. 
+Ta présentation dans « 1. 📌 C'EST QUOI CE PROJET ? » et ton évaluation des risques doivent retracer l'évolution de l'entreprise/fondation porteuse et les grandes étapes du projet depuis sa création, tout en intégrant les derniers développements survenus au cours des dernières 48 heures.
 """
         
         with st.spinner("Récupération des données et rédaction du rapport..."):
