@@ -7,7 +7,7 @@ import base64
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. Configuration et Style CSS
+# 1. Configuration et Style CSS (Base de Référence)
 # ---------------------------------------------------------
 st.set_page_config(page_title="Cryptos Analyst IA", page_icon="🤖", layout="wide")
 
@@ -49,7 +49,7 @@ requests_left = max(0, 2 - st.session_state.daily_request_count)
 # ---------------------------------------------------------
 # Cache & API CoinGecko
 # ---------------------------------------------------------
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=43200)
 def get_coingecko_data(query):
     try:
         search_res = requests.get(f"https://api.coingecko.com/api/v3/search?query={query}", timeout=10).json()
@@ -73,13 +73,14 @@ def get_coingecko_data(query):
     except Exception as e: return None, f"Erreur API CoinGecko : {str(e)}"
 
 # ---------------------------------------------------------
-# API Gemini : Rotation Clés & Modèles Actuels
+# API Gemini : Modèles actuels (Gemini 3.6 / 3.5 Flash)
 # ---------------------------------------------------------
 def generate_content_with_key_failover(prompt_text, system_instruction):
     gemini_keys = [st.secrets[k] for k in st.secrets if "GEMINI_API_KEY" in k]
     if not gemini_keys: return None, "Aucune clé API trouvée dans secrets.toml"
     
-    candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash"]
+    # Mise à jour des identifiants vers les modèles actuels
+    candidate_models = ["gemini-3.6-flash", "gemini-3.5-flash"]
     last_error = ""
 
     for api_key in gemini_keys:
@@ -113,18 +114,18 @@ RÈGLES ABSOLUES :
 1. Tu ne dois générer QUE le rapport final en Markdown.
 2. NE GÉNÈRE AUCUN plan de pensée, aucune étape de recherche interne, aucun brouillon, aucun texte d'introduction type "Voici mon analyse". 
 3. COMMENCE DIRECTEMENT par le titre de la section 1 ("1. 📌 C'EST QUOI CE PROJET ?").
-4. SECTION CHIFFRES EN DIRECT : Utilise STRICTEMENT et UNIQUEMENT les chiffres exacts de CoinGecko transmis dans le prompt (Prix, Market Cap, Volume 24h, Variations, Rang).
-5. ACTUALITÉS & MOTEURS : Analyse les dynamiques et actualités récentes des 24 dernières heures concernant le projet.
+4. SECTION CHIFFRES EN DIRECT : Utilise STRICTEMENT et UNIQUEMENT les chiffres exacts de CoinGecko transmis dans le prompt (Prix, Market Cap, Volume 24h, Variations, Rang). N'invente ni n'estime aucun chiffre.
+5. ACTUALITÉS & MOTEURS : Intègre les actualités fraîches et dynamiques des dernières 24 heures concernant le projet.
 
 Structure stricte :
 1. 📌 C'EST QUOI CE PROJET ? (Verdict à chaud)
 2. 📊 LES CHIFFRES EN DIRECT (Utilise obligatoirement les chiffres précis de CoinGecko : Prix, Market Cap, Volume 24h, Variation 24h/7j, Rang)
 > 🎓 Minute Pédago - Explique une notion simple.
 3. 🔗 INFOS TECHNIQUES (RÉSEAUX & CONTRATS)
-4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Mets en avant les infos fraîches des 24h)
+4. 🚀 GROS MOTEURS DE HAUSSE & ACTUALITÉS (Mets en avant les infos fraîches des dernières 24h)
 5. ⚠️ RISQUES À NE PAS IGNORER
 6. ⚔️ COMPARATIF CONCURRENCE
-7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 selon le barème : 0-3.5=Danger, 4-5.5=Moyen, 6-7.5=Solide, 8-10=Pilier).
+7. 🎯 MON VERDICT & CONSEIL DE POTE (Note sur 10 selon le barème strict : 0-3.5=Danger, 4-5.5=Moyen, 6-7.5=Solide, 8-10=Pilier).
 """
 
 # ---------------------------------------------------------
@@ -155,7 +156,7 @@ DONNÉES OFFICIELLES COINGECKO EN DIRECT :
 - Adresses de contrats / Réseaux :
 {platforms}
 """
-        prompt = f"{coingecko_context}\n\nRédige l'analyse complète de ce projet en incluant ses actualités les plus récentes des dernières 24 heures et en respectant la structure exigée."
+        prompt = f"{coingecko_context}\n\nRédige l'analyse complète de ce projet en incluant ses actualités les plus récentes des dernières 24 heures et en respectant strictement la structure exigée."
         
         with st.spinner("Récupération des données CoinGecko et rédaction du rapport..."):
             res, gen_err = generate_content_with_key_failover(prompt, SYSTEM_INSTRUCTION)
