@@ -365,23 +365,15 @@ DONNÉES OFFICIELLES COINGECKO EN DIRECT :
 - Adresses de contrats / Réseaux :
 {platforms}
 """
-prompt = f"""
-{coingecko_context}
-
-DATE DU JOUR : {TODAY}
-
-Consigne spéciale : Rédige l'analyse de ce projet en t'assurant que la présentation ("1. 📌 C'EST QUOI CE PROJET ?") et les actualités intègrent les derniers développements survenus jusqu'aux dernières 48 heures.
-"""
+        prompt = f"{coingecko_context}\n\nDATE DU JOUR : {TODAY}\n\nConsigne spéciale : Rédige l'analyse complète de ce projet en t'assurant que la présentation (« 1. 📌 C'EST QUOI CE PROJET ? ») et les actualités intègrent rigoureusement les derniers développements survenus jusqu'aux dernières 48 heures."
         
-with st.spinner("Récupération des données et rédaction du rapport..."):
+        with st.spinner("Récupération des données et rédaction du rapport..."):
             res, gen_err = generate_content_with_key_failover(prompt, SYSTEM_INSTRUCTION)
             
-            # Arrêt de la rotation autour de l'avatar
             with avatar_placeholder.container():
                 render_avatar(is_loading=False)
 
             if res:
-                # Incrémentation et sauvegarde locale de la limite
                 new_count = current_user_count + 1
                 components.html(f"<script>localStorage.setItem('ca_count', '{new_count}');</script>", height=0)
                 st.query_params["user_count"] = str(new_count)
@@ -394,7 +386,7 @@ with st.spinner("Récupération des données et rédaction du rapport..."):
                 
                 share_text = f"🤖 Découvre l'analyse complète de {cg_data['name']} ({cg_data['symbol']}) générée par Cryptos Analyst IA !"
                 encoded_text = urllib.parse.quote(share_text)
-                encoded_url = urllib.parse.quote("https://meagotbnwddhsaa6d3pfln.streamlit.app")
+                encoded_url = urllib.parse.quote("https://cryptos-analyst-ia.streamlit.app")
                 
                 wa_url = f"https://api.whatsapp.com/send?text={encoded_text}%20{encoded_url}"
                 tg_url = f"https://t.me/share/url?url={encoded_url}&text={encoded_text}"
